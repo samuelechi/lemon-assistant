@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+@theme {
+  --color-gold: #C49A00;
+  --color-gold-dark: #7A6200;
+  --color-gold-light: #E8D97A;
+  --color-gold-pale: #F5F0E0;
+  --color-ink: #0F0F0D;
+  --color-ink-2: #2A2A26;
+  --color-ink-3: #6A6A62;
+  --color-cream: #FAFAF5;
+  --color-cream-2: #F2F1EA;
+  --color-border: #E8E8E3;
+
+  --font-serif: "Cormorant Garamond", Georgia, serif;
+  --font-sans: "Montserrat", sans-serif;
+
+  --animate-marquee: marquee 22s linear infinite;
+  --animate-fadeIn: fadeIn 0.3s ease;
+
+  @keyframes marquee {
+    0% {
+      transform: translateX(0);
+    }
+
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background: #FAFAF5;
+    color: #0F0F0D;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .dark body {
+    background: #0F0F0D;
+    color: #F0EFE8;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5 {
+    font-family: var(--font-serif);
+    font-weight: 500;
+  }
+
+  /* DARK MODE OVERRIDES */
+  .dark .bg-white {
+    background: #1A1A16 !important;
+  }
+
+  .dark .bg-cream {
+    background: #0F0F0D !important;
+  }
+
+  .dark .bg-cream-2 {
+    background: #1A1A16 !important;
+  }
+
+  .dark .border-border {
+    border-color: #2A2A26 !important;
+  }
+
+  .dark .text-ink {
+    color: #F0EFE8 !important;
+  }
+
+  .dark .text-ink-3 {
+    color: #6A6A62 !important;
+  }
+}

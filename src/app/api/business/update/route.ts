@@ -1,0 +1,49 @@
+import { NextRequest, NextResponse } from "next/server"
+import { createServerSupabaseClient } from "@/lib/supabase/server"
+import { updateVapiAssistant } from "@/lib/vapi"
+
+export async function POST(req: NextRequest) {
+    try {
+        const supabase = await createServerSupabaseClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+        const body = await req.json()
+        const { ai_name, ai_greeting, name, type, about, hours_start, hours_end } = body
+
+        const { data: business } = await supabase
+            .from("businesses")
+            .select("id, vapi_assistant_id")
+            .eq("user_id", user.id)
+            .single()
+
+        if (!business) return NextResponse.json({ error: "Business not found" }, { status: 404 })
+
+        // Update Supabase
+        await supabase
+            .from("businesses")
+            .update({
+                ...(ai_name && { ai_name }),
+                ...(ai_greeting && { ai_greeting }),
+                ...(name && { name }),
+                ...(type && { type }),
+                ...(about !== undefined && { about }),
+                ...(hours_start && { hours_start }),
+                ...(hours_end && { hours_end }),
+            })
+            .eq("user_id", user.id)
+
+        // Update Vapi assistant if it exists
+        if (business.vapi_assistant_id) {
+            await updateVapiAssistant(business.vapi_assistant_id, {
+                businessName: name,
+                aiName: ai_name,
+            })
+        }
+
+        return NextResponse.json({ success: true })
+    } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "Something went wrong"
+        return NextResponse.json({ error: message }, { status: 500 })
+    }
+}
