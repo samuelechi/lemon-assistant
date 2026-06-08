@@ -323,6 +323,19 @@ export default function DashboardPage() {
         setSaving(false)
     }
 
+    async function switchToBuiltin() {
+        setSaving(true)
+        try {
+            const res = await fetch("/api/calendar/disconnect", { method: "POST" })
+            if (!res.ok) throw new Error("Failed to switch")
+            setBusiness(prev => prev ? { ...prev, calendar_type: "builtin", calendar_token: null } : prev)
+        } catch (err) {
+            console.error(err)
+        } finally {
+            setSaving(false)
+        }
+    }
+
     const saveAvailability = async () => {
         setSaving(true)
         try {
@@ -888,7 +901,12 @@ export default function DashboardPage() {
                                                     </Button>
                                                 </a>
                                             ) : (
-                                                <Button variant={business?.calendar_type === "builtin" ? "gold" : "secondary"} size="sm">
+                                                <Button
+                                                    variant={business?.calendar_type === "builtin" ? "gold" : "secondary"}
+                                                    size="sm"
+                                                    onClick={business?.calendar_type !== "builtin" ? switchToBuiltin : undefined}
+                                                    disabled={saving || business?.calendar_type === "builtin"}
+                                                >
                                                     {business?.calendar_type === "builtin" ? "Active" : "Use this"}
                                                 </Button>
                                             )}
