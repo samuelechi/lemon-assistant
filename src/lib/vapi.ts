@@ -89,7 +89,7 @@ ${meetingTypes.join(", ")} — each ${meetingDuration} minutes long.
         },
       },
       server: {
-        url: `${appUrl}/api/calendar/book`,
+        url: `${appUrl}/api/calendar/book?businessId=${businessId}`,
       },
     },
   ] : []
@@ -103,11 +103,12 @@ ${meetingTypes.join(", ")} — each ${meetingDuration} minutes long.
     body: JSON.stringify({
       name: `${businessName} — ${aiName}`,
       firstMessage: `Thank you for calling ${businessName}, this is ${aiName} speaking. How can I help you today?`,
+      serverUrl: `${appUrl}/api/vapi/webhook`,
+      tools,
       model: {
         provider: "openai",
         model: "gpt-4o-mini",
         systemPrompt,
-        tools,
       },
       voice: {
         provider: "11labs",
