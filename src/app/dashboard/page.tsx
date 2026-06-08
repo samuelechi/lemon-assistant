@@ -608,8 +608,8 @@ export default function DashboardPage() {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <Button variant="outline" size="sm" onClick={recreateAssistant} disabled={settingUp}>
-                                        {settingUp ? "Recreating..." : "Recreate"}
+                                    <Button variant="outline" size="sm" onClick={recreateAssistant} disabled={saving}>
+                                        {saving ? "Recreating..." : "Recreate"}
                                     </Button>
                                     <Button variant="outline" size="sm" onClick={() => setActive("settings")}>
                                         Edit agent
