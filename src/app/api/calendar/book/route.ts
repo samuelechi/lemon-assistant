@@ -14,15 +14,16 @@ export async function POST(req: NextRequest) {
     try {
         const body = await req.json()
 
-        // Vapi wraps arguments inside message.toolCallList
+        // Vapi sends: message.toolCallList[0].arguments (object, not string)
         const toolCall = body?.message?.toolCallList?.[0]
-        const args = toolCall?.function?.arguments ?? body
+        const toolCallId = toolCall?.id ?? ""
+        const args = toolCall?.arguments ?? body
 
         const { callerName, callerPhone, date, time, type } = args
 
         if (!businessId || !callerName || !date || !time) {
             return NextResponse.json({
-                results: [{ toolCallId: toolCall?.id ?? "", result: "Missing required fields: need callerName, date, and time." }]
+                results: [{ toolCallId, result: "Missing required fields. I need the caller's name, date, and time to book." }]
             })
         }
 
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
 
         if (existing) {
             return NextResponse.json({
-                results: [{ toolCallId: toolCall?.id ?? "", result: "Sorry, that time slot was just booked. Please check availability again for another time." }]
+                results: [{ toolCallId, result: "Sorry, that time slot was just taken. Please check availability again for another time." }]
             })
         }
 
@@ -51,11 +52,11 @@ export async function POST(req: NextRequest) {
 
         if (!business) {
             return NextResponse.json({
-                results: [{ toolCallId: toolCall?.id ?? "", result: "Business not found." }]
+                results: [{ toolCallId, result: "Business not found." }]
             })
         }
 
-        // Book in our database
+        // Book in database
         const { data: appointment, error } = await supabase
             .from("appointments")
             .insert({
@@ -72,7 +73,7 @@ export async function POST(req: NextRequest) {
 
         if (error) throw error
 
-        // Also create Google Calendar event if connected
+        // Sync to Google Calendar if connected
         if (business.calendar_type === "google" && business.calendar_token) {
             await createGoogleCalendarEvent(businessId, {
                 callerName,
@@ -87,14 +88,14 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({
             results: [{
-                toolCallId: toolCall?.id ?? "",
-                result: `Appointment confirmed! ${callerName} is booked for ${type || "an appointment"} on ${date} at ${time}.`
+                toolCallId,
+                result: `Appointment confirmed! ${callerName} is booked for ${type || "an appointment"} on ${date} at ${time}. They will receive a confirmation shortly.`
             }]
         })
     } catch (err) {
         console.error("Booking error:", err)
         return NextResponse.json({
-            results: [{ toolCallId: "", result: "Failed to book appointment. Please try again." }]
+            results: [{ toolCallId: "", result: "Failed to book the appointment. Please try again." }]
         })
     }
 }

@@ -77,7 +77,7 @@ async function getAvailability(businessId: string, date: string) {
     return { available, date, dayOfWeek }
 }
 
-// Used by your dashboard/frontend
+// Called by your dashboard/frontend
 export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const businessId = searchParams.get("businessId")
@@ -105,13 +105,15 @@ export async function POST(req: NextRequest) {
     try {
         const body = await req.json()
 
-        // Vapi wraps arguments inside message.toolCallList
+        // Vapi sends: message.toolCallList[0].arguments (object, not string)
         const toolCall = body?.message?.toolCallList?.[0]
-        const date = toolCall?.function?.arguments?.date ?? body?.date
+        const toolCallId = toolCall?.id ?? ""
+        const args = toolCall?.arguments
+        const date = args?.date ?? body?.date
 
         if (!businessId || !date) {
             return NextResponse.json({
-                results: [{ toolCallId: toolCall?.id ?? "", result: "Missing businessId or date" }]
+                results: [{ toolCallId, result: "Missing businessId or date." }]
             })
         }
 
@@ -119,24 +121,21 @@ export async function POST(req: NextRequest) {
 
         if (!result) {
             return NextResponse.json({
-                results: [{ toolCallId: toolCall?.id ?? "", result: "Business not found" }]
+                results: [{ toolCallId, result: "Business not found." }]
             })
         }
 
         const message = result.available.length === 0
-            ? "No available slots for that date."
-            : `Available times on ${date}: ${result.available.join(", ")}`
+            ? "There are no available slots on that date. Would you like to try a different day?"
+            : `Available times on ${date}: ${result.available.join(", ")}. Which time works for you?`
 
         return NextResponse.json({
-            results: [{
-                toolCallId: toolCall?.id ?? "",
-                result: message,
-            }]
+            results: [{ toolCallId, result: message }]
         })
     } catch (err) {
         console.error("Availability POST error:", err)
         return NextResponse.json({
-            results: [{ toolCallId: "", result: "Failed to get availability" }]
+            results: [{ toolCallId: "", result: "Failed to check availability. Please try again." }]
         })
     }
 }
