@@ -336,6 +336,26 @@ export default function DashboardPage() {
         }
     }
 
+    async function recreateAssistant() {
+        setSaving(true)
+        try {
+            const res = await fetch("/api/vapi/recreate", { method: "POST" })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error)
+            setBusiness(prev => prev ? {
+                ...prev,
+                vapi_assistant_id: data.assistantId,
+                phone_number: data.phoneNumber,
+            } : prev)
+            alert(`Done! New number: ${data.phoneNumber}`)
+        } catch (err) {
+            console.error(err)
+            alert("Failed to recreate assistant")
+        } finally {
+            setSaving(false)
+        }
+    }
+
     const saveAvailability = async () => {
         setSaving(true)
         try {
@@ -587,9 +607,14 @@ export default function DashboardPage() {
                                         </p>
                                     </div>
                                 </div>
-                                <Button variant="outline" size="sm" onClick={() => setActive("settings")}>
-                                    Edit agent
-                                </Button>
+                                <div className="flex items-center gap-2">
+                                    <Button variant="outline" size="sm" onClick={recreateAssistant} disabled={settingUp}>
+                                        {settingUp ? "Recreating..." : "Recreate"}
+                                    </Button>
+                                    <Button variant="outline" size="sm" onClick={() => setActive("settings")}>
+                                        Edit agent
+                                    </Button>
+                                </div>
                             </div>
 
                             <div className="grid md:grid-cols-2 gap-6">
