@@ -8,13 +8,22 @@ const supabase = createClient(
 )
 
 export async function POST(req: NextRequest) {
+    const { searchParams } = new URL(req.url)
+    const businessId = searchParams.get("businessId")
+
     try {
-        const { searchParams } = new URL(req.url)
-        const businessId = searchParams.get("businessId")
-        const { callerName, callerPhone, date, time, type } = await req.json()
+        const body = await req.json()
+
+        // Vapi wraps arguments inside message.toolCallList
+        const toolCall = body?.message?.toolCallList?.[0]
+        const args = toolCall?.function?.arguments ?? body
+
+        const { callerName, callerPhone, date, time, type } = args
 
         if (!businessId || !callerName || !date || !time) {
-            return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+            return NextResponse.json({
+                results: [{ toolCallId: toolCall?.id ?? "", result: "Missing required fields: need callerName, date, and time." }]
+            })
         }
 
         // Check slot is still available
@@ -28,7 +37,9 @@ export async function POST(req: NextRequest) {
             .maybeSingle()
 
         if (existing) {
-            return NextResponse.json({ error: "This slot is already booked" }, { status: 409 })
+            return NextResponse.json({
+                results: [{ toolCallId: toolCall?.id ?? "", result: "Sorry, that time slot was just booked. Please check availability again for another time." }]
+            })
         }
 
         // Get business details
@@ -38,7 +49,11 @@ export async function POST(req: NextRequest) {
             .eq("id", businessId)
             .single()
 
-        if (!business) return NextResponse.json({ error: "Business not found" }, { status: 404 })
+        if (!business) {
+            return NextResponse.json({
+                results: [{ toolCallId: toolCall?.id ?? "", result: "Business not found." }]
+            })
+        }
 
         // Book in our database
         const { data: appointment, error } = await supabase
@@ -70,9 +85,16 @@ export async function POST(req: NextRequest) {
             })
         }
 
-        return NextResponse.json({ success: true, appointment })
+        return NextResponse.json({
+            results: [{
+                toolCallId: toolCall?.id ?? "",
+                result: `Appointment confirmed! ${callerName} is booked for ${type || "an appointment"} on ${date} at ${time}.`
+            }]
+        })
     } catch (err) {
         console.error("Booking error:", err)
-        return NextResponse.json({ error: "Failed to book appointment" }, { status: 500 })
+        return NextResponse.json({
+            results: [{ toolCallId: "", result: "Failed to book appointment. Please try again." }]
+        })
     }
 }
