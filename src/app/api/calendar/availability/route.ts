@@ -104,6 +104,8 @@ export async function POST(req: NextRequest) {
 
     try {
         const body = await req.json()
+        console.log("VAPI BODY:", JSON.stringify(body, null, 2))  // 👈 add this
+        console.log("BUSINESS ID:", businessId)  // 👈 and this
 
         // Vapi sends: message.toolCallList[0].arguments (object, not string)
         const toolCall = body?.message?.toolCallList?.[0]
