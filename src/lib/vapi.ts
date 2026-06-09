@@ -104,11 +104,11 @@ ${meetingTypes.join(", ")} — each ${meetingDuration} minutes long.
       name: `${businessName} — ${aiName}`,
       firstMessage: `Thank you for calling ${businessName}, this is ${aiName} speaking. How can I help you today?`,
       serverUrl: `${appUrl}/api/vapi/webhook`,
-      tools,
       model: {
         provider: "openai",
         model: "gpt-4o-mini",
         systemPrompt,
+        tools,  // 👈 moved inside model
       },
       voice: {
         provider: "11labs",
