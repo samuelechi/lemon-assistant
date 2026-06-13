@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
         const assistant = await createVapiAssistant({
             businessName: business.name,
             aiName: business.ai_name,
-            businessType: business.business_type,
+            businessType: business.type,  // 👈 was business.business_type
             hoursStart: business.hours_start,
             hoursEnd: business.hours_end,
             workingDays: business.working_days,
