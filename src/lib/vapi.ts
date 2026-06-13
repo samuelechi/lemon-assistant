@@ -50,41 +50,51 @@ ${meetingTypes.join(", ")} — each ${meetingDuration} minutes long.
 - Always be warm, calm, and professional
   `.trim()
 
-  // Step 1: Create tools first via Vapi Tools API, get back IDs
-  const availabilityTool = businessId && appUrl ? await createVapiTool({
-    name: "checkAvailability",
-    description: "Check available appointment slots for a given date",
-    parameters: {
-      type: "object",
-      properties: {
-        date: {
-          type: "string",
-          description: "The date to check in YYYY-MM-DD format",
+  const tools = businessId && appUrl ? [
+    {
+      type: "function",
+      async: false,
+      function: {
+        name: "checkAvailability",
+        description: "Check available appointment slots for a given date",
+        parameters: {
+          type: "object",
+          properties: {
+            date: {
+              type: "string",
+              description: "The date to check in YYYY-MM-DD format",
+            },
+          },
+          required: ["date"],
         },
       },
-      required: ["date"],
-    },
-    serverUrl: `${appUrl}/api/calendar/availability?businessId=${businessId}`,
-  }) : null
-
-  const bookTool = businessId && appUrl ? await createVapiTool({
-    name: "bookAppointment",
-    description: "Book an appointment for the caller",
-    parameters: {
-      type: "object",
-      properties: {
-        callerName: { type: "string", description: "Full name of the caller" },
-        callerPhone: { type: "string", description: "Phone number of the caller" },
-        date: { type: "string", description: "Date in YYYY-MM-DD format" },
-        time: { type: "string", description: "Time slot e.g. 2:00 PM" },
-        type: { type: "string", description: "Type of appointment" },
+      server: {
+        url: `${appUrl}/api/calendar/availability?businessId=${businessId}`,
       },
-      required: ["callerName", "date", "time"],
     },
-    serverUrl: `${appUrl}/api/calendar/book?businessId=${businessId}`,
-  }) : null
-
-  const toolIds = [availabilityTool?.id, bookTool?.id].filter(Boolean) as string[]
+    {
+      type: "function",
+      async: false,
+      function: {
+        name: "bookAppointment",
+        description: "Book an appointment for the caller",
+        parameters: {
+          type: "object",
+          properties: {
+            callerName: { type: "string", description: "Full name of the caller" },
+            callerPhone: { type: "string", description: "Phone number of the caller" },
+            date: { type: "string", description: "Date in YYYY-MM-DD format" },
+            time: { type: "string", description: "Time slot e.g. 2:00 PM" },
+            type: { type: "string", description: "Type of appointment" },
+          },
+          required: ["callerName", "date", "time"],
+        },
+      },
+      server: {
+        url: `${appUrl}/api/calendar/book?businessId=${businessId}`,
+      },
+    },
+  ] : []
 
   const res = await fetch(`${VAPI_BASE}/assistant`, {
     method: "POST",
@@ -100,7 +110,7 @@ ${meetingTypes.join(", ")} — each ${meetingDuration} minutes long.
         provider: "openai",
         model: "gpt-4o-mini",
         systemPrompt,
-        toolIds,
+        tools,
       },
       voice: {
         provider: "11labs",
@@ -119,41 +129,6 @@ ${meetingTypes.join(", ")} — each ${meetingDuration} minutes long.
   const data = await res.json()
   if (!res.ok) {
     console.error("Vapi create assistant error:", JSON.stringify(data, null, 2))
-    throw new Error(data.message || data.error || JSON.stringify(data))
-  }
-  return data
-}
-
-async function createVapiTool({
-  name, description, parameters, serverUrl,
-}: {
-  name: string
-  description: string
-  parameters: object
-  serverUrl: string
-}) {
-  const res = await fetch(`${VAPI_BASE}/tool`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${VAPI_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      type: "function",
-      function: {
-        name,
-        description,
-        parameters,
-      },
-      server: {
-        url: serverUrl,
-      },
-    }),
-  })
-
-  const data = await res.json()
-  if (!res.ok) {
-    console.error("Vapi create tool error:", JSON.stringify(data, null, 2))
     throw new Error(data.message || data.error || JSON.stringify(data))
   }
   return data
