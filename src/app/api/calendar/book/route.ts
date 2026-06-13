@@ -13,12 +13,14 @@ export async function POST(req: NextRequest) {
 
     try {
         const body = await req.json()
-        console.log("VAPI BOOK BODY:", JSON.stringify(body, null, 2))
 
         const toolCall = body?.message?.toolCallList?.[0]
         const toolCallId = toolCall?.id ?? ""
-        const args = toolCall?.arguments
+        const rawArgs = toolCall?.function?.arguments
+        const args = typeof rawArgs === "string" ? JSON.parse(rawArgs) : rawArgs
         const { callerName, callerPhone, date, time, type } = args ?? {}
+
+        console.log("BOOK:", { businessId, callerName, date, time, toolCallId })
 
         if (!businessId || !callerName || !date || !time) {
             return NextResponse.json({

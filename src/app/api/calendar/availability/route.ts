@@ -77,7 +77,6 @@ async function getAvailability(businessId: string, date: string) {
     return { available, date, dayOfWeek }
 }
 
-// Called by your dashboard/frontend
 export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const businessId = searchParams.get("businessId")
@@ -97,18 +96,17 @@ export async function GET(req: NextRequest) {
     }
 }
 
-// Called by Vapi tool
 export async function POST(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const businessId = searchParams.get("businessId")
 
     try {
         const body = await req.json()
-        console.log("VAPI BODY:", JSON.stringify(body, null, 2))
 
         const toolCall = body?.message?.toolCallList?.[0]
         const toolCallId = toolCall?.id ?? ""
-        const args = toolCall?.arguments
+        const rawArgs = toolCall?.function?.arguments
+        const args = typeof rawArgs === "string" ? JSON.parse(rawArgs) : rawArgs
         const date = args?.date
 
         console.log("toolCallId:", toolCallId, "date:", date, "businessId:", businessId)
