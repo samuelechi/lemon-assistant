@@ -104,40 +104,34 @@ export async function POST(req: NextRequest) {
 
     try {
         const body = await req.json()
-        console.log("VAPI BODY:", JSON.stringify(body, null, 2))  // 👈 add this
-        console.log("BUSINESS ID:", businessId)  // 👈 and this
+        console.log("VAPI BODY:", JSON.stringify(body, null, 2))
 
-        // Vapi sends: message.toolCallList[0].arguments (object, not string)
-        const toolCall = body?.message?.toolCallList?.[0]
-        const toolCallId = toolCall?.id ?? ""
-        const args = toolCall?.arguments
-        const date = args?.date ?? body?.date
+        // apiRequest tools send args directly in body
+        const date = body?.date
 
         if (!businessId || !date) {
             return NextResponse.json({
-                results: [{ toolCallId, result: "Missing businessId or date." }]
-            })
+                error: "Missing businessId or date."
+            }, { status: 400 })
         }
 
         const result = await getAvailability(businessId, date)
 
         if (!result) {
             return NextResponse.json({
-                results: [{ toolCallId, result: "Business not found." }]
-            })
+                error: "Business not found."
+            }, { status: 404 })
         }
 
         const message = result.available.length === 0
             ? "There are no available slots on that date. Would you like to try a different day?"
             : `Available times on ${date}: ${result.available.join(", ")}. Which time works for you?`
 
-        return NextResponse.json({
-            results: [{ toolCallId, result: message }]
-        })
+        return NextResponse.json({ result: message })
     } catch (err) {
         console.error("Availability POST error:", err)
         return NextResponse.json({
-            results: [{ toolCallId: "", result: "Failed to check availability. Please try again." }]
-        })
+            error: "Failed to check availability. Please try again."
+        }, { status: 500 })
     }
 }
