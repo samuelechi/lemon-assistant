@@ -52,46 +52,38 @@ ${meetingTypes.join(", ")} — each ${meetingDuration} minutes long.
 
   const tools = businessId && appUrl ? [
     {
-      type: "function",
-      async: false,
-      function: {
-        name: "checkAvailability",
-        description: "Check available appointment slots for a given date",
-        parameters: {
-          type: "object",
-          properties: {
-            date: {
-              type: "string",
-              description: "The date to check in YYYY-MM-DD format",
-            },
+      type: "apiRequest",
+      method: "POST",
+      name: "checkAvailability",
+      description: "Check available appointment slots for a given date",
+      url: `${appUrl}/api/calendar/availability?businessId=${businessId}`,
+      body: {
+        type: "object",
+        properties: {
+          date: {
+            type: "string",
+            description: "The date to check in YYYY-MM-DD format",
           },
-          required: ["date"],
         },
-      },
-      server: {
-        url: `${appUrl}/api/calendar/availability?businessId=${businessId}`,
+        required: ["date"],
       },
     },
     {
-      type: "function",
-      async: false,
-      function: {
-        name: "bookAppointment",
-        description: "Book an appointment for the caller",
-        parameters: {
-          type: "object",
-          properties: {
-            callerName: { type: "string", description: "Full name of the caller" },
-            callerPhone: { type: "string", description: "Phone number of the caller" },
-            date: { type: "string", description: "Date in YYYY-MM-DD format" },
-            time: { type: "string", description: "Time slot e.g. 2:00 PM" },
-            type: { type: "string", description: "Type of appointment" },
-          },
-          required: ["callerName", "date", "time"],
+      type: "apiRequest",
+      method: "POST",
+      name: "bookAppointment",
+      description: "Book an appointment for the caller",
+      url: `${appUrl}/api/calendar/book?businessId=${businessId}`,
+      body: {
+        type: "object",
+        properties: {
+          callerName: { type: "string", description: "Full name of the caller" },
+          callerPhone: { type: "string", description: "Phone number of the caller" },
+          date: { type: "string", description: "Date in YYYY-MM-DD format" },
+          time: { type: "string", description: "Time slot e.g. 2:00 PM" },
+          type: { type: "string", description: "Type of appointment" },
         },
-      },
-      server: {
-        url: `${appUrl}/api/calendar/book?businessId=${businessId}`,
+        required: ["callerName", "date", "time"],
       },
     },
   ] : []
