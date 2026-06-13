@@ -400,8 +400,12 @@ export default function DashboardPage() {
     const callsToday = calls.filter(c => c.created_at?.startsWith(today))
     const bookingsToday = callsToday.filter(c => c.appointment_booked)
     const urgentCalls = calls.filter(c => c.urgent && c.created_at?.startsWith(today))
-    const totalMinutes = calls.reduce((sum, c) => sum + (c.duration_seconds || 0), 0)
-    const minutesUsed = Math.round(totalMinutes / 60)
+    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
+    const minutesUsed = Math.round(
+        calls
+            .filter(c => c.created_at >= startOfMonth)
+            .reduce((sum, c) => sum + (c.duration_seconds || 0), 0) / 60
+    )
     const bookingRate = calls.length > 0 ? Math.round((calls.filter(c => c.appointment_booked).length / calls.length) * 100) : 0
 
     const filteredCalls = callFilter === "All" ? calls
