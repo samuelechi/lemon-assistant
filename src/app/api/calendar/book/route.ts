@@ -13,18 +13,19 @@ export async function POST(req: NextRequest) {
 
     try {
         const body = await req.json()
-        console.log("VAPI BODY:", JSON.stringify(body, null, 2))
+        console.log("VAPI BOOK BODY:", JSON.stringify(body, null, 2))
 
-        // apiRequest tools send args directly in body
-        const { callerName, callerPhone, date, time, type } = body
+        const toolCall = body?.message?.toolCallList?.[0]
+        const toolCallId = toolCall?.id ?? ""
+        const args = toolCall?.arguments
+        const { callerName, callerPhone, date, time, type } = args ?? {}
 
         if (!businessId || !callerName || !date || !time) {
             return NextResponse.json({
-                error: "Missing required fields."
-            }, { status: 400 })
+                results: [{ toolCallId, result: "Missing required fields." }]
+            })
         }
 
-        // Check slot is still available
         const { data: existing } = await supabase
             .from("appointments")
             .select("id")
@@ -36,8 +37,8 @@ export async function POST(req: NextRequest) {
 
         if (existing) {
             return NextResponse.json({
-                error: "That time slot is already booked."
-            }, { status: 409 })
+                results: [{ toolCallId, result: "That time slot is already booked. Please check availability again." }]
+            })
         }
 
         const { data: business } = await supabase
@@ -46,7 +47,11 @@ export async function POST(req: NextRequest) {
             .eq("id", businessId)
             .single()
 
-        if (!business) return NextResponse.json({ error: "Business not found." }, { status: 404 })
+        if (!business) {
+            return NextResponse.json({
+                results: [{ toolCallId, result: "Business not found." }]
+            })
+        }
 
         const { data: appointment, error } = await supabase
             .from("appointments")
@@ -77,12 +82,15 @@ export async function POST(req: NextRequest) {
         }
 
         return NextResponse.json({
-            result: `Appointment confirmed! ${callerName} is booked for ${type || "an appointment"} on ${date} at ${time}.`
+            results: [{
+                toolCallId,
+                result: `Appointment confirmed! ${callerName} is booked for ${type || "an appointment"} on ${date} at ${time}.`
+            }]
         })
     } catch (err) {
         console.error("Booking error:", err)
         return NextResponse.json({
-            error: "Failed to book the appointment."
-        }, { status: 500 })
+            results: [{ toolCallId: "", result: "Failed to book the appointment. Please try again." }]
+        })
     }
 }
