@@ -20,7 +20,7 @@ export async function createVapiAssistant({
   appUrl?: string
 }) {
   const systemPrompt = `
-You are ${aiName}, a professional and friendly AI receptionist for ${businessName}, a ${businessType}.
+You are ${aiName}, a professional and friendly AI receptionist for ${businessName}${businessType ? `, a ${businessType}` : ""}.
 
 ${about ? `About this business: ${about}` : ""}
 

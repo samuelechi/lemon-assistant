@@ -25,11 +25,8 @@ const MEETING_TYPES = [
 ]
 
 const CALENDARS = [
-    { id: "google", label: "Google Calendar", icon: "🗓️" },
-    { id: "outlook", label: "Outlook / Microsoft 365", icon: "📧" },
-    { id: "calendly", label: "Calendly", icon: "🔗" },
-    { id: "apple", label: "Apple Calendar", icon: "🍎" },
-    { id: "builtin", label: "Use built-in calendar", icon: "⚡" },
+    { id: "google", label: "Google Calendar", icon: "🗓️", desc: "Bookings appear automatically in Google Calendar" },
+    { id: "builtin", label: "Use built-in calendar", icon: "⚡", desc: "View all bookings inside your LemonAssistant dashboard" },
 ]
 
 const steps = [
@@ -46,6 +43,7 @@ export default function OnboardingPage() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState("")
     const [phoneNumber, setPhoneNumber] = useState("")
+    const [attempted, setAttempted] = useState(false)
 
     const [form, setForm] = useState({
         name: "",
@@ -80,6 +78,15 @@ export default function OnboardingPage() {
         return true
     }
 
+    const handleNext = () => {
+        if (!canNext()) {
+            setAttempted(true)
+            return
+        }
+        setAttempted(false)
+        setStep(s => s + 1)
+    }
+
     const handleFinish = async () => {
         setLoading(true)
         setError("")
@@ -87,7 +94,6 @@ export default function OnboardingPage() {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) { router.push("/login"); return }
 
-        // Check if business already exists for this user
         const { data: existing } = await supabase
             .from("businesses")
             .select("id")
@@ -96,7 +102,6 @@ export default function OnboardingPage() {
 
         let dbError
         if (existing) {
-            // Update existing
             const { error: updateError } = await supabase
                 .from("businesses")
                 .update({
@@ -114,7 +119,6 @@ export default function OnboardingPage() {
                 .eq("user_id", user.id)
             dbError = updateError
         } else {
-            // Insert new
             const { error: insertError } = await supabase
                 .from("businesses")
                 .insert({
@@ -135,7 +139,6 @@ export default function OnboardingPage() {
 
         if (dbError) { setError(dbError.message); setLoading(false); return }
 
-        // Create Vapi agent + phone number
         try {
             const res = await fetch("/api/vapi/create", {
                 method: "POST",
@@ -153,7 +156,6 @@ export default function OnboardingPage() {
             })
 
             const data = await res.json()
-            console.log("Vapi create response:", res.status, data)
             if (data.phoneNumber) setPhoneNumber(data.phoneNumber)
         } catch (err) {
             console.error("Vapi setup error:", err)
@@ -172,10 +174,10 @@ export default function OnboardingPage() {
                     {steps.map((s, i) => (
                         <div key={s.n} className="flex items-center gap-1 md:gap-2">
                             <div className={`flex items-center gap-1.5 rounded-full transition-all duration-300 ${step === s.n
-                                    ? "bg-gold text-white px-3 py-1.5"
-                                    : step > s.n
-                                        ? "bg-gold-pale text-gold w-7 h-7 justify-center"
-                                        : "bg-cream-2 text-ink-3 w-7 h-7 justify-center"
+                                ? "bg-gold text-white px-3 py-1.5"
+                                : step > s.n
+                                    ? "bg-gold-pale text-gold w-7 h-7 justify-center"
+                                    : "bg-cream-2 text-ink-3 w-7 h-7 justify-center"
                                 }`}>
                                 {step > s.n ? <CheckCircle2 size={13} /> : s.icon}
                                 {step === s.n && (
@@ -219,20 +221,28 @@ export default function OnboardingPage() {
                                     <input
                                         type="text"
                                         value={form.name}
-                                        onChange={e => update("name", e.target.value)}
+                                        onChange={e => { update("name", e.target.value); setAttempted(false) }}
                                         placeholder="e.g. Smith Moving Co."
-                                        className="w-full px-4 py-3 text-sm font-sans border border-border rounded-lg bg-white text-ink placeholder:text-ink-3 focus:outline-none focus:border-gold transition-colors"
+                                        className={`w-full px-4 py-3 text-sm font-sans border rounded-lg bg-white text-ink placeholder:text-ink-3 focus:outline-none transition-colors ${attempted && !form.name.trim() ? "border-red-400 focus:border-red-400" : "border-border focus:border-gold"}`}
                                     />
+                                    {attempted && !form.name.trim() && (
+                                        <p className="text-2xs text-red-500 font-sans mt-1.5">Please enter your business name</p>
+                                    )}
                                 </div>
                                 <div>
-                                    <label className="block text-2xs font-sans font-500 text-ink mb-3 tracking-[0.12em] uppercase">Business type</label>
+                                    <label className="block text-2xs font-sans font-500 text-ink mb-3 tracking-[0.12em] uppercase">
+                                        Business type
+                                        <span className="ml-1 text-red-400">*</span>
+                                    </label>
                                     <div className="grid grid-cols-2 gap-2">
                                         {BUSINESS_TYPES.map(type => (
                                             <button
                                                 key={type}
-                                                onClick={() => update("type", type)}
+                                                onClick={() => { update("type", type); setAttempted(false) }}
                                                 className={`px-3 py-2.5 text-xs font-sans rounded-lg border transition-all duration-150 text-left ${form.type === type
-                                                        ? "bg-gold-pale border-gold text-gold-dark font-500"
+                                                    ? "bg-gold-pale border-gold text-gold-dark font-500"
+                                                    : attempted && !form.type
+                                                        ? "bg-white border-red-200 text-ink-3 hover:border-gold-light hover:bg-gold-pale/50"
                                                         : "bg-white border-border text-ink-3 hover:border-gold-light hover:bg-gold-pale/50"
                                                     }`}
                                             >
@@ -240,6 +250,9 @@ export default function OnboardingPage() {
                                             </button>
                                         ))}
                                     </div>
+                                    {attempted && !form.type && (
+                                        <p className="text-2xs text-red-500 font-sans mt-2">Please select a business type to continue</p>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-2xs font-sans font-500 text-ink mb-2 tracking-[0.12em] uppercase">
@@ -302,14 +315,17 @@ export default function OnboardingPage() {
                                                 key={day}
                                                 onClick={() => toggleDay(day)}
                                                 className={`px-3 py-2 text-xs font-sans rounded-lg border transition-all duration-150 ${form.workingDays.includes(day)
-                                                        ? "bg-gold-pale border-gold text-gold-dark font-500"
-                                                        : "bg-white border-border text-ink-3 hover:border-gold-light"
+                                                    ? "bg-gold-pale border-gold text-gold-dark font-500"
+                                                    : "bg-white border-border text-ink-3 hover:border-gold-light"
                                                     }`}
                                             >
                                                 {day.slice(0, 3)}
                                             </button>
                                         ))}
                                     </div>
+                                    {attempted && form.workingDays.length === 0 && (
+                                        <p className="text-2xs text-red-500 font-sans mt-2">Please select at least one working day</p>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-2xs font-sans font-500 text-ink mb-3 tracking-[0.12em] uppercase">Appointment types</label>
@@ -319,14 +335,17 @@ export default function OnboardingPage() {
                                                 key={type}
                                                 onClick={() => toggleMeeting(type)}
                                                 className={`px-3 py-2.5 text-xs font-sans rounded-lg border transition-all duration-150 text-left ${form.meetingTypes.includes(type)
-                                                        ? "bg-gold-pale border-gold text-gold-dark font-500"
-                                                        : "bg-white border-border text-ink-3 hover:border-gold-light hover:bg-gold-pale/50"
+                                                    ? "bg-gold-pale border-gold text-gold-dark font-500"
+                                                    : "bg-white border-border text-ink-3 hover:border-gold-light hover:bg-gold-pale/50"
                                                     }`}
                                             >
                                                 {type}
                                             </button>
                                         ))}
                                     </div>
+                                    {attempted && form.meetingTypes.length === 0 && (
+                                        <p className="text-2xs text-red-500 font-sans mt-2">Please select at least one appointment type</p>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-2xs font-sans font-500 text-ink mb-3 tracking-[0.12em] uppercase">Default appointment duration</label>
@@ -336,8 +355,8 @@ export default function OnboardingPage() {
                                                 key={d}
                                                 onClick={() => update("meetingDuration", d)}
                                                 className={`flex-1 py-2.5 text-xs font-sans rounded-lg border transition-all duration-150 ${form.meetingDuration === d
-                                                        ? "bg-gold-pale border-gold text-gold-dark font-500"
-                                                        : "bg-white border-border text-ink-3 hover:border-gold-light"
+                                                    ? "bg-gold-pale border-gold text-gold-dark font-500"
+                                                    : "bg-white border-border text-ink-3 hover:border-gold-light"
                                                     }`}
                                             >
                                                 {d}m
@@ -366,8 +385,8 @@ export default function OnboardingPage() {
                                             key={cal.id}
                                             onClick={() => update("calendarType", cal.id)}
                                             className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl border transition-all duration-150 text-left ${form.calendarType === cal.id
-                                                    ? "bg-gold-pale border-gold"
-                                                    : "bg-white border-border hover:border-gold-light hover:bg-gold-pale/30"
+                                                ? "bg-gold-pale border-gold"
+                                                : "bg-white border-border hover:border-gold-light hover:bg-gold-pale/30"
                                                 }`}
                                         >
                                             <span className="text-2xl">{cal.icon}</span>
@@ -375,11 +394,7 @@ export default function OnboardingPage() {
                                                 <p className={`text-sm font-sans font-500 ${form.calendarType === cal.id ? "text-gold-dark" : "text-ink"}`}>
                                                     {cal.label}
                                                 </p>
-                                                {cal.id === "builtin" && (
-                                                    <p className="text-2xs text-ink-3 font-sans mt-0.5">
-                                                        We give you a simple calendar inside your dashboard
-                                                    </p>
-                                                )}
+                                                <p className="text-2xs text-ink-3 font-sans mt-0.5">{cal.desc}</p>
                                             </div>
                                             {form.calendarType === cal.id && (
                                                 <CheckCircle2 size={18} className="text-gold flex-shrink-0" />
@@ -387,10 +402,10 @@ export default function OnboardingPage() {
                                         </button>
                                     ))}
                                 </div>
-                                {form.calendarType !== "builtin" && (
+                                {form.calendarType === "google" && (
                                     <div className="mt-5 p-4 bg-gold-pale border border-gold-light rounded-lg">
                                         <p className="text-xs font-sans text-gold-dark leading-relaxed">
-                                            ⚡ You&apos;ll connect your {CALENDARS.find(c => c.id === form.calendarType)?.label} after setup from your dashboard settings.
+                                            🗓️ You&apos;ll connect Google Calendar from your dashboard after setup is complete.
                                         </p>
                                     </div>
                                 )}
@@ -448,7 +463,7 @@ export default function OnboardingPage() {
                     {/* NAV BUTTONS */}
                     <div className="flex justify-between items-center mt-8 pb-8">
                         <button
-                            onClick={() => setStep(s => s - 1)}
+                            onClick={() => { setStep(s => s - 1); setAttempted(false) }}
                             className={`flex items-center gap-2 text-sm font-sans text-ink-3 hover:text-ink transition-colors ${step === 1 ? "invisible" : ""}`}
                         >
                             <ChevronLeft size={16} /> Back
@@ -457,8 +472,7 @@ export default function OnboardingPage() {
                             <Button
                                 variant="gold"
                                 size="lg"
-                                onClick={() => setStep(s => s + 1)}
-                                disabled={!canNext()}
+                                onClick={handleNext}
                                 className="flex items-center gap-2"
                             >
                                 Continue <ChevronRight size={16} />
