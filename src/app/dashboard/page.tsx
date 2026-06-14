@@ -61,6 +61,18 @@ type Appointment = {
     created_at: string
 }
 
+type SubscriptionStatus = {
+    plan: string
+    status: string
+    minutesUsed: number
+    minutesLimit: number
+    percentUsed: number
+    currentPeriodEnd: string | null
+    isActive: boolean
+    isTrial: boolean
+    isExpired: boolean
+}
+
 function timeAgo(dateStr: string): string {
     const now = new Date()
     const date = new Date(dateStr)
@@ -161,6 +173,8 @@ export default function DashboardPage() {
     const [blockDate, setBlockDate] = useState("")
     const [blockReason, setBlockReason] = useState("")
     const [blockedDates, setBlockedDates] = useState<{ id: string; date: string; reason: string }[]>([])
+    const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null)
+    const [billingLoading, setBillingLoading] = useState(false)
     const [settingsForm, setSettingsForm] = useState({
         aiName: "",
         aiGreeting: "",
@@ -205,7 +219,6 @@ export default function DashboardPage() {
             if (!biz) { router.push("/onboarding"); return }
             setBusiness(biz)
 
-            // Prefill settings form
             setSettingsForm({
                 aiName: biz.ai_name || "",
                 aiGreeting: "",
@@ -216,7 +229,6 @@ export default function DashboardPage() {
                 hoursEnd: biz.hours_end || "17:00",
             })
 
-            // Load blocked dates
             const { data: blocked } = await supabase
                 .from("blocked_dates")
                 .select("id, date, reason")
@@ -224,7 +236,6 @@ export default function DashboardPage() {
                 .order("date", { ascending: true })
             setBlockedDates(blocked || [])
 
-            // Load availability
             const { data: avail } = await supabase
                 .from("availability")
                 .select("day_of_week, start_time, end_time, is_active")
@@ -236,7 +247,6 @@ export default function DashboardPage() {
                 }))
             }
 
-            // Load calls
             const { data: callData } = await supabase
                 .from("calls")
                 .select("*")
@@ -245,7 +255,6 @@ export default function DashboardPage() {
                 .limit(50)
             setCalls(callData || [])
 
-            // Load appointments
             const { data: aptData } = await supabase
                 .from("appointments")
                 .select("*")
@@ -256,6 +265,13 @@ export default function DashboardPage() {
                 .limit(20)
             setAppointments(aptData || [])
 
+            // Fetch subscription status
+            const subRes = await fetch("/api/stripe/status")
+            if (subRes.ok) {
+                const subData = await subRes.json()
+                setSubscription(subData)
+            }
+
             setLoading(false)
         }
         load()
@@ -264,6 +280,32 @@ export default function DashboardPage() {
     const handleLogout = async () => {
         await supabase.auth.signOut()
         router.push("/")
+    }
+
+    const handleUpgrade = async (plan: "growth" | "pro") => {
+        setBillingLoading(true)
+        try {
+            const res = await fetch(`/api/stripe/checkout?plan=${plan}`)
+            const data = await res.json()
+            if (data.url) window.location.href = data.url
+            else setCalendarStatus("Failed to start checkout. Try again.")
+        } catch {
+            setCalendarStatus("Failed to start checkout. Try again.")
+        }
+        setBillingLoading(false)
+    }
+
+    const handleManageBilling = async () => {
+        setBillingLoading(true)
+        try {
+            const res = await fetch("/api/stripe/portal")
+            const data = await res.json()
+            if (data.url) window.location.href = data.url
+            else setCalendarStatus("Failed to open billing portal. Try again.")
+        } catch {
+            setCalendarStatus("Failed to open billing portal. Try again.")
+        }
+        setBillingLoading(false)
     }
 
     const completeSetup = async () => {
@@ -1041,38 +1083,134 @@ export default function DashboardPage() {
                     {/* BILLING */}
                     {active === "billing" && (
                         <div className="space-y-6 animate-[fadeIn_0.3s_ease] max-w-2xl">
+
+                            {/* Current plan + usage */}
                             <div className={`rounded-xl border p-6 ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
-                                <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-start justify-between mb-6">
                                     <div>
                                         <h3 className={`font-serif text-lg ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>Current plan</h3>
-                                        <p className="text-xs font-sans text-ink-3 mt-0.5">Free trial · 14 days remaining</p>
+                                        <p className="text-xs font-sans text-ink-3 mt-0.5">
+                                            {subscription?.isActive
+                                                ? `${subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1)} · renews ${subscription.currentPeriodEnd ? new Date(subscription.currentPeriodEnd).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" }) : "—"}`
+                                                : subscription?.isExpired
+                                                    ? "Trial expired — upgrade to continue"
+                                                    : "Free trial"}
+                                        </p>
                                     </div>
-                                    <Badge variant="gold">Trial</Badge>
+                                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-sans font-500 border ${subscription?.isActive
+                                        ? "bg-green-50 text-green-700 border-green-200"
+                                        : subscription?.isExpired
+                                            ? "bg-red-50 text-red-700 border-red-200"
+                                            : "bg-gold-pale text-gold-dark border-gold-light"
+                                        }`}>
+                                        {subscription?.isActive
+                                            ? subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1)
+                                            : subscription?.isExpired ? "Expired" : "Trial"}
+                                    </span>
                                 </div>
-                                <div className="grid md:grid-cols-2 gap-4">
-                                    {[
-                                        { name: "Growth", price: "$99", mins: "250 minutes", features: ["AI receptionist", "Appointment booking", "SMS confirmations", "Call summaries", "Analytics dashboard"] },
-                                        { name: "Pro", price: "$199", mins: "600 minutes", features: ["Everything in Growth", "Custom AI voice", "Multi-language", "Review collection", "Priority support"], featured: true },
-                                    ].map(plan => (
-                                        <div key={plan.name} className={`rounded-xl p-5 border ${plan.featured ? "bg-ink border-ink" : isDark ? "bg-[#0F0F0D] border-[#2A2A26]" : "bg-cream border-border"
-                                            }`}>
-                                            <p className={`text-xs font-sans font-500 uppercase tracking-wider mb-1 ${plan.featured ? "text-gold" : "text-ink-3"}`}>{plan.name}</p>
-                                            <p className={`font-serif text-3xl mb-0.5 ${plan.featured ? "text-gold" : isDark ? "text-[#F0EFE8]" : "text-ink"}`}>{plan.price}</p>
-                                            <p className="text-xs font-sans mb-4 text-ink-3">/mo · {plan.mins}</p>
-                                            <ul className="space-y-2 mb-5">
-                                                {plan.features.map(f => (
-                                                    <li key={f} className={`flex items-center gap-2 text-xs font-sans ${plan.featured ? "text-[#AAAAAA]" : "text-ink-3"}`}>
-                                                        <CheckCircle2 size={12} className="text-gold flex-shrink-0" /> {f}
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                            <Button variant={plan.featured ? "gold" : "secondary"} size="sm" className="w-full">
-                                                Upgrade to {plan.name}
-                                            </Button>
-                                        </div>
-                                    ))}
+
+                                {/* Minutes usage bar */}
+                                <div className="mb-2 flex items-center justify-between">
+                                    <p className="text-xs font-sans font-500 text-ink-3">Minutes used this month</p>
+                                    <p className={`text-xs font-sans font-500 ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>
+                                        {subscription?.minutesUsed ?? minutesUsed} / {subscription?.minutesLimit ?? 13} min
+                                    </p>
                                 </div>
+                                <div className={`w-full h-2 rounded-full overflow-hidden ${isDark ? "bg-[#2A2A26]" : "bg-cream-2"}`}>
+                                    <div
+                                        className={`h-2 rounded-full transition-all duration-500 ${(subscription?.percentUsed ?? 0) >= 90 ? "bg-red-400" : "bg-gold"}`}
+                                        style={{ width: `${Math.min(subscription?.percentUsed ?? 0, 100)}%` }}
+                                    />
+                                </div>
+                                {(subscription?.percentUsed ?? 0) >= 80 && (
+                                    <p className="text-2xs font-sans text-red-500 mt-2 flex items-center gap-1">
+                                        <AlertTriangle size={10} /> You&apos;re running low on minutes
+                                    </p>
+                                )}
+
+                                {/* Manage button for active subscribers */}
+                                {subscription?.isActive && (
+                                    <Button variant="outline" size="sm" className="mt-5" onClick={handleManageBilling} disabled={billingLoading}>
+                                        {billingLoading ? "Loading..." : "Manage subscription →"}
+                                    </Button>
+                                )}
                             </div>
+
+                            {/* Upgrade plans — hide if already on pro */}
+                            {(!subscription?.isActive || subscription?.plan === "growth") && (
+                                <div className={`rounded-xl border p-6 ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
+                                    <h3 className={`font-serif text-lg mb-1 ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>
+                                        {subscription?.isActive ? "Upgrade your plan" : "Choose a plan"}
+                                    </h3>
+                                    <p className="text-xs font-sans text-ink-3 mb-6">
+                                        {subscription?.isExpired ? "Your trial has ended. Upgrade to keep your AI receptionist running." : "Unlock more minutes and features."}
+                                    </p>
+                                    <div className="grid md:grid-cols-2 gap-4">
+                                        {[
+                                            {
+                                                id: "growth" as const,
+                                                name: "Growth",
+                                                price: "$99",
+                                                mins: "250 minutes",
+                                                features: ["AI receptionist", "Appointment booking", "SMS confirmations", "Call summaries", "Analytics dashboard"],
+                                                current: subscription?.plan === "growth" && subscription?.isActive,
+                                            },
+                                            {
+                                                id: "pro" as const,
+                                                name: "Pro",
+                                                price: "$199",
+                                                mins: "600 minutes",
+                                                features: ["Everything in Growth", "Custom AI voice", "Multi-language", "Review collection", "Priority support"],
+                                                featured: true,
+                                                current: subscription?.plan === "pro" && subscription?.isActive,
+                                            },
+                                        ].map(plan => (
+                                            <div key={plan.name} className={`rounded-xl p-5 border ${plan.featured ? "bg-ink border-ink" : isDark ? "bg-[#0F0F0D] border-[#2A2A26]" : "bg-cream border-border"}`}>
+                                                <p className={`text-xs font-sans font-500 uppercase tracking-wider mb-1 ${plan.featured ? "text-gold" : "text-ink-3"}`}>{plan.name}</p>
+                                                <p className={`font-serif text-3xl mb-0.5 ${plan.featured ? "text-gold" : isDark ? "text-[#F0EFE8]" : "text-ink"}`}>{plan.price}</p>
+                                                <p className="text-xs font-sans mb-4 text-ink-3">/mo · {plan.mins}</p>
+                                                <ul className="space-y-2 mb-5">
+                                                    {plan.features.map(f => (
+                                                        <li key={f} className={`flex items-center gap-2 text-xs font-sans ${plan.featured ? "text-[#AAAAAA]" : "text-ink-3"}`}>
+                                                            <CheckCircle2 size={12} className="text-gold flex-shrink-0" /> {f}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                                {plan.current ? (
+                                                    <Button variant="outline" size="sm" className="w-full" disabled>
+                                                        Current plan
+                                                    </Button>
+                                                ) : (
+                                                    <Button
+                                                        variant={plan.featured ? "gold" : "secondary"}
+                                                        size="sm"
+                                                        className="w-full"
+                                                        onClick={() => handleUpgrade(plan.id)}
+                                                        disabled={billingLoading}
+                                                    >
+                                                        {billingLoading ? "Loading..." : `Upgrade to ${plan.name} →`}
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Already on Pro */}
+                            {subscription?.isActive && subscription?.plan === "pro" && (
+                                <div className={`rounded-xl border p-6 ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 bg-gold-pale rounded-xl flex items-center justify-center flex-shrink-0">
+                                            <CheckCircle2 size={18} className="text-gold" />
+                                        </div>
+                                        <div>
+                                            <p className={`text-sm font-sans font-500 ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>You&apos;re on the Pro plan</p>
+                                            <p className="text-xs font-sans text-ink-3 mt-0.5">You have access to all features and 600 minutes per month.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
 
