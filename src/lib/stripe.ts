@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-04-22.dahlia",
+  apiVersion: "2026-05-27.dahlia",
 });
 
 export async function createCheckoutSession({
@@ -41,7 +41,7 @@ export async function createPortalSession(customerId: string, returnUrl: string)
 
 export const STRIPE_PRICES = {
   growth_monthly: process.env.STRIPE_PRICE_GROWTH_MONTHLY!,
-  pro_monthly:    process.env.STRIPE_PRICE_PRO_MONTHLY!,
-  growth_yearly:  process.env.STRIPE_PRICE_GROWTH_YEARLY!,
-  pro_yearly:     process.env.STRIPE_PRICE_PRO_YEARLY!,
+  pro_monthly: process.env.STRIPE_PRICE_PRO_MONTHLY!,
+  growth_yearly: process.env.STRIPE_PRICE_GROWTH_YEARLY!,
+  pro_yearly: process.env.STRIPE_PRICE_PRO_YEARLY!,
 };
