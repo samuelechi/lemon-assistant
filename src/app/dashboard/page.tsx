@@ -285,7 +285,11 @@ export default function DashboardPage() {
     const handleUpgrade = async (plan: "growth" | "pro") => {
         setBillingLoading(true)
         try {
-            const res = await fetch(`/api/stripe/checkout?plan=${plan}`)
+            const res = await fetch("/api/stripe/checkout", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ plan }),
+            })
             const data = await res.json()
             if (data.url) window.location.href = data.url
             else setCalendarStatus("Failed to start checkout. Try again.")
