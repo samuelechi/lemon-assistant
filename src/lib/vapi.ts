@@ -132,7 +132,11 @@ ${meetingTypes.join(", ")} — each ${meetingDuration} minutes long.
   return data
 }
 
-export async function createVapiPhoneNumber(assistantId: string) {
+export async function createVapiPhoneNumber(assistantId: string, appUrl?: string) {
+  const serverUrl = appUrl
+    ? `${appUrl}/api/vapi/webhook`
+    : `${process.env.NEXT_PUBLIC_APP_URL}/api/vapi/webhook`
+
   const res = await fetch(`${VAPI_BASE}/phone-number`, {
     method: "POST",
     headers: {
@@ -142,6 +146,7 @@ export async function createVapiPhoneNumber(assistantId: string) {
     body: JSON.stringify({
       provider: "vapi",
       assistantId,
+      serverUrl,
       name: "LemonAssistant number",
       numberDesiredAreaCode: "651",
     }),

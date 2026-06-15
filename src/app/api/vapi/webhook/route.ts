@@ -1,24 +1,116 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 
-// Use service role for webhook — no user session available
 const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+async function checkMinuteLimit(businessId: string): Promise<{ allowed: boolean; reason?: string }> {
+    const { data: business } = await supabase
+        .from("businesses")
+        .select("user_id")
+        .eq("id", businessId)
+        .single()
+
+    if (!business) return { allowed: false, reason: "Business not found." }
+
+    const { data: sub } = await supabase
+        .from("subscriptions")
+        .select("plan, status")
+        .eq("user_id", business.user_id)
+        .maybeSingle()
+
+    const planLimits: Record<string, number> = {
+        growth: 250,
+        pro: 600,
+        trial: 13,
+    }
+
+    const plan = sub?.status === "active" ? sub.plan : "trial"
+    const limit = planLimits[plan] ?? 13
+
+    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
+    const { data: calls } = await supabase
+        .from("calls")
+        .select("duration_seconds")
+        .eq("business_id", businessId)
+        .gte("created_at", startOfMonth)
+
+    const minutesUsed = Math.round(
+        (calls || []).reduce((sum, c) => sum + (c.duration_seconds || 0), 0) / 60
+    )
+
+    if (minutesUsed >= limit) {
+        const reason = sub?.status === "active"
+            ? `${plan} plan limit of ${limit} minutes reached`
+            : `Trial limit of ${limit} minutes reached`
+        return { allowed: false, reason }
+    }
+
+    return { allowed: true }
+}
+
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json()
 
-        console.log("=== VAPI WEBHOOK ===")
-        console.log("Message type:", body?.message?.type || body?.type)
-        console.log("====================")
-
-        // Vapi sends either body.message or directly in body
         const message = body?.message || body
         const type = message?.type
 
+        console.log("=== VAPI WEBHOOK ===")
+        console.log("Message type:", type)
+        console.log("====================")
+
+        // --- ASSISTANT REQUEST: gate calls before they start ---
+        if (type === "assistant-request") {
+            const phoneNumberId = message?.call?.phoneNumberId
+
+            if (!phoneNumberId) {
+                return NextResponse.json({
+                    error: {
+                        type: "voice-request-url-error",
+                        msg: "Unable to identify your business. Please contact support.",
+                    }
+                })
+            }
+
+            const { data: business } = await supabase
+                .from("businesses")
+                .select("id, vapi_assistant_id")
+                .eq("vapi_phone_id", phoneNumberId)
+                .single()
+
+            if (!business || !business.vapi_assistant_id) {
+                return NextResponse.json({
+                    error: {
+                        type: "voice-request-url-error",
+                        msg: "This service is not currently available. Please contact the business directly.",
+                    }
+                })
+            }
+
+            // Check minute limit
+            const { allowed, reason } = await checkMinuteLimit(business.id)
+
+            if (!allowed) {
+                console.log("Call rejected — minute limit reached:", reason)
+                return NextResponse.json({
+                    error: {
+                        type: "voice-request-url-error",
+                        msg: "This service is temporarily unavailable. Please contact the business directly to book an appointment.",
+                    }
+                })
+            }
+
+            // All good — return the assistant ID
+            console.log("Call approved for business:", business.id)
+            return NextResponse.json({
+                assistantId: business.vapi_assistant_id,
+            })
+        }
+
+        // --- END OF CALL REPORT ---
         if (type !== "end-of-call-report") {
             return NextResponse.json({ received: true })
         }
@@ -26,8 +118,8 @@ export async function POST(req: NextRequest) {
         const call = message?.call || body?.call
         const transcript = message?.transcript || body?.transcript
         const summary = message?.summary || body?.summary
-        // Find the business by their Vapi phone number ID
         const phoneNumberId = call?.phoneNumberId
+
         if (!phoneNumberId) return NextResponse.json({ received: true })
 
         const { data: business } = await supabase
@@ -38,7 +130,6 @@ export async function POST(req: NextRequest) {
 
         if (!business) return NextResponse.json({ received: true })
 
-        // Extract caller info from transcript summary
         const callerName = extractCallerName(summary)
         const reason = extractReason(summary)
         const isUrgent = detectUrgency(transcript, summary)
@@ -47,7 +138,6 @@ export async function POST(req: NextRequest) {
             ? new Date(call.endedAt).getTime() - new Date(call.startedAt).getTime()
             : 0) / 1000)
 
-        // Save call to database
         const { data: savedCall } = await supabase
             .from("calls")
             .insert({
@@ -65,7 +155,6 @@ export async function POST(req: NextRequest) {
             .select()
             .single()
 
-        // If appointment was booked extract and save it
         if (appointmentBooked && savedCall) {
             const appointment = extractAppointment(summary)
             if (appointment) {
@@ -82,7 +171,6 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        // Send SMS summary to business owner
         await sendOwnerSummary({
             businessId: business.id,
             businessName: business.name,
@@ -134,7 +222,6 @@ function extractAppointment(summary: string): {
     date: string; time: string; type: string
 } | null {
     if (!summary) return null
-    // Try to find date patterns like "Tuesday", "tomorrow", "March 5th"
     const dateMatch = summary.match(
         /(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|tomorrow|today|\w+ \d+(?:st|nd|rd|th)?)/i
     )
@@ -169,7 +256,6 @@ async function sendOwnerSummary({
     summary: string
 }) {
     try {
-        // Get owner phone from Supabase
         const { data: profile } = await supabase
             .from("businesses")
             .select("user_id")

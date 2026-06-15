@@ -7,6 +7,51 @@ const supabase = createClient(
     process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+async function checkMinuteLimit(businessId: string): Promise<{ allowed: boolean; reason?: string }> {
+    const { data: business } = await supabase
+        .from("businesses")
+        .select("user_id")
+        .eq("id", businessId)
+        .single()
+
+    if (!business) return { allowed: false, reason: "Business not found." }
+
+    const { data: sub } = await supabase
+        .from("subscriptions")
+        .select("plan, status")
+        .eq("user_id", business.user_id)
+        .maybeSingle()
+
+    const planLimits: Record<string, number> = {
+        growth: 250,
+        pro: 600,
+        trial: 13,
+    }
+
+    const plan = sub?.status === "active" ? sub.plan : "trial"
+    const limit = planLimits[plan] ?? 13
+
+    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
+    const { data: calls } = await supabase
+        .from("calls")
+        .select("duration_seconds")
+        .eq("business_id", businessId)
+        .gte("created_at", startOfMonth)
+
+    const minutesUsed = Math.round(
+        (calls || []).reduce((sum, c) => sum + (c.duration_seconds || 0), 0) / 60
+    )
+
+    if (minutesUsed >= limit) {
+        const reason = sub?.status === "active"
+            ? `Your ${plan} plan's ${limit} minutes have been used for this month.`
+            : `Your free trial of ${limit} minutes has been used.`
+        return { allowed: false, reason }
+    }
+
+    return { allowed: true }
+}
+
 export async function POST(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const businessId = searchParams.get("businessId")
@@ -25,6 +70,18 @@ export async function POST(req: NextRequest) {
         if (!businessId || !callerName || !date || !time) {
             return NextResponse.json({
                 results: [{ toolCallId, result: "Missing required fields." }]
+            })
+        }
+
+        // 🔒 Minute enforcement
+        const { allowed, reason } = await checkMinuteLimit(businessId)
+        if (!allowed) {
+            console.log("Minute limit reached for business:", businessId, reason)
+            return NextResponse.json({
+                results: [{
+                    toolCallId,
+                    result: "I'm sorry, this service is temporarily unavailable. Please contact the business directly to book an appointment."
+                }]
             })
         }
 
