@@ -114,9 +114,11 @@ export async function POST(req: NextRequest) {
         }
 
         const call = message?.call || body?.call
-        const transcript = message?.transcript || body?.transcript
-        const summary = message?.summary || body?.summary
+        // Per Vapi docs: transcript and messages are under artifact,
+        // summary is under analysis.summary, duration = endedAt - startedAt
         const artifact = message?.artifact || body?.artifact
+        const transcript = message?.artifact?.transcript || message?.transcript || body?.transcript
+        const summary = message?.analysis?.summary || message?.summary || body?.summary
         const phoneNumberId = call?.phoneNumberId
 
         if (!phoneNumberId) return NextResponse.json({ received: true })
@@ -129,13 +131,12 @@ export async function POST(req: NextRequest) {
 
         if (!business) return NextResponse.json({ received: true })
 
-        // FIX 1: Duration — Vapi sends artifact.duration in seconds directly.
-        // Fall back to calculating from startedAt/endedAt if artifact isn't there.
+        // Duration: calculate from call.startedAt and call.endedAt
+        // Vapi does not send a pre-calculated duration field
         const duration = Math.round(
-            artifact?.duration ||
-            (call?.endedAt && call?.startedAt
+            call?.endedAt && call?.startedAt
                 ? (new Date(call.endedAt).getTime() - new Date(call.startedAt).getTime()) / 1000
-                : 0)
+                : 0
         )
 
         const callerName = extractCallerName(summary, transcript)
