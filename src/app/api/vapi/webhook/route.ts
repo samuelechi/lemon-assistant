@@ -131,13 +131,26 @@ export async function POST(req: NextRequest) {
 
         if (!business) return NextResponse.json({ received: true })
 
-        // Duration: calculate from call.startedAt and call.endedAt
-        // Vapi does not send a pre-calculated duration field
-        const duration = Math.round(
-            call?.endedAt && call?.startedAt
-                ? (new Date(call.endedAt).getTime() - new Date(call.startedAt).getTime()) / 1000
-                : 0
-        )
+        // Duration: startedAt/endedAt are null in the webhook payload (known Vapi issue).
+        // Fetch the full call object from Vapi API to get accurate duration.
+        let duration = 0
+        if (call?.id) {
+            try {
+                const vapiCallRes = await fetch(`https://api.vapi.ai/call/${call.id}`, {
+                    headers: { Authorization: `Bearer ${process.env.VAPI_API_KEY}` },
+                })
+                if (vapiCallRes.ok) {
+                    const vapiCall = await vapiCallRes.json()
+                    if (vapiCall.startedAt && vapiCall.endedAt) {
+                        duration = Math.round(
+                            (new Date(vapiCall.endedAt).getTime() - new Date(vapiCall.startedAt).getTime()) / 1000
+                        )
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to fetch call duration from Vapi:", err)
+            }
+        }
 
         const callerName = extractCallerName(summary, transcript)
         const reason = extractReason(summary)
