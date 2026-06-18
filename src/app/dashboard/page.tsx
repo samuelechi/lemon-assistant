@@ -100,6 +100,15 @@ function formatDate(dateStr: string): string {
     return date.toLocaleDateString("en-CA", { weekday: "short", month: "short", day: "numeric" })
 }
 
+// FIX 1: Timezone-safe local date string
+// toISOString() returns UTC, which rolls over 5-6 hrs early in North America.
+// This adjusts for the local timezone offset so "today" matches the user's clock.
+function getLocalDateString(): string {
+    const d = new Date()
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset())
+    return d.toISOString().split("T")[0]
+}
+
 function StatusBadge({ status }: { status: string }) {
     const map: Record<string, { label: string; color: string }> = {
         booked: { label: "Booked", color: "bg-green-50 text-green-700 border-green-200" },
@@ -175,6 +184,8 @@ export default function DashboardPage() {
     const [blockedDates, setBlockedDates] = useState<{ id: string; date: string; reason: string }[]>([])
     const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null)
     const [billingLoading, setBillingLoading] = useState(false)
+    const [bellOpen, setBellOpen] = useState(false)
+    const [notificationsRead, setNotificationsRead] = useState(false)
     const [settingsForm, setSettingsForm] = useState({
         aiName: "",
         aiGreeting: "",
@@ -205,74 +216,80 @@ export default function DashboardPage() {
     }, [])
 
     useEffect(() => {
+        // FIX 2: try/catch/finally so a failed fetch doesn't leave the user
+        // stuck on a permanent loading spinner with no way out.
         const load = async () => {
             setLoading(true)
-            const { data: { user } } = await supabase.auth.getUser()
-            if (!user) { router.push("/login"); return }
+            try {
+                const { data: { user } } = await supabase.auth.getUser()
+                if (!user) { router.push("/login"); return }
 
-            const { data: biz } = await supabase
-                .from("businesses")
-                .select("id, name, ai_name, type, phone_number, vapi_assistant_id, hours_start, hours_end, calendar_type, about")
-                .eq("user_id", user.id)
-                .maybeSingle()
+                const { data: biz } = await supabase
+                    .from("businesses")
+                    .select("id, name, ai_name, type, phone_number, vapi_assistant_id, hours_start, hours_end, calendar_type, about")
+                    .eq("user_id", user.id)
+                    .maybeSingle()
 
-            if (!biz) { router.push("/onboarding"); return }
-            setBusiness(biz)
+                if (!biz) { router.push("/onboarding"); return }
+                setBusiness(biz)
 
-            setSettingsForm({
-                aiName: biz.ai_name || "",
-                aiGreeting: "",
-                businessName: biz.name || "",
-                businessType: biz.type || "",
-                about: biz.about || "",
-                hoursStart: biz.hours_start || "09:00",
-                hoursEnd: biz.hours_end || "17:00",
-            })
+                setSettingsForm({
+                    aiName: biz.ai_name || "",
+                    aiGreeting: "",
+                    businessName: biz.name || "",
+                    businessType: biz.type || "",
+                    about: biz.about || "",
+                    hoursStart: biz.hours_start || "09:00",
+                    hoursEnd: biz.hours_end || "17:00",
+                })
 
-            const { data: blocked } = await supabase
-                .from("blocked_dates")
-                .select("id, date, reason")
-                .eq("business_id", biz.id)
-                .order("date", { ascending: true })
-            setBlockedDates(blocked || [])
+                const { data: blocked } = await supabase
+                    .from("blocked_dates")
+                    .select("id, date, reason")
+                    .eq("business_id", biz.id)
+                    .order("date", { ascending: true })
+                setBlockedDates(blocked || [])
 
-            const { data: avail } = await supabase
-                .from("availability")
-                .select("day_of_week, start_time, end_time, is_active")
-                .eq("business_id", biz.id)
-            if (avail && avail.length > 0) {
-                setAvailability(prev => prev.map(a => {
-                    const found = avail.find(v => v.day_of_week === a.day.toLowerCase())
-                    return found ? { ...a, start: found.start_time, end: found.end_time, active: found.is_active } : a
-                }))
+                const { data: avail } = await supabase
+                    .from("availability")
+                    .select("day_of_week, start_time, end_time, is_active")
+                    .eq("business_id", biz.id)
+                if (avail && avail.length > 0) {
+                    setAvailability(prev => prev.map(a => {
+                        const found = avail.find(v => v.day_of_week === a.day.toLowerCase())
+                        return found ? { ...a, start: found.start_time, end: found.end_time, active: found.is_active } : a
+                    }))
+                }
+
+                const { data: callData } = await supabase
+                    .from("calls")
+                    .select("*")
+                    .eq("business_id", biz.id)
+                    .order("created_at", { ascending: false })
+                    .limit(50)
+                setCalls(callData || [])
+
+                const { data: aptData } = await supabase
+                    .from("appointments")
+                    .select("*")
+                    .eq("business_id", biz.id)
+                    .gte("date", new Date().toISOString().split("T")[0])
+                    .order("date", { ascending: true })
+                    .order("time", { ascending: true })
+                    .limit(20)
+                setAppointments(aptData || [])
+
+                const subRes = await fetch("/api/stripe/status")
+                if (subRes.ok) {
+                    const subData = await subRes.json()
+                    setSubscription(subData)
+                }
+            } catch (error) {
+                console.error("Dashboard failed to load:", error)
+                setCalendarStatus("Something went wrong loading your dashboard. Please refresh.")
+            } finally {
+                setLoading(false)
             }
-
-            const { data: callData } = await supabase
-                .from("calls")
-                .select("*")
-                .eq("business_id", biz.id)
-                .order("created_at", { ascending: false })
-                .limit(50)
-            setCalls(callData || [])
-
-            const { data: aptData } = await supabase
-                .from("appointments")
-                .select("*")
-                .eq("business_id", biz.id)
-                .gte("date", new Date().toISOString().split("T")[0])
-                .order("date", { ascending: true })
-                .order("time", { ascending: true })
-                .limit(20)
-            setAppointments(aptData || [])
-
-            // Fetch subscription status
-            const subRes = await fetch("/api/stripe/status")
-            if (subRes.ok) {
-                const subData = await subRes.json()
-                setSubscription(subData)
-            }
-
-            setLoading(false)
         }
         load()
     }, [])
@@ -442,7 +459,8 @@ export default function DashboardPage() {
 
     const isDark = mounted && theme === "dark"
 
-    const today = new Date().toISOString().split("T")[0]
+    // FIX 1 applied: use getLocalDateString() instead of new Date().toISOString().split("T")[0]
+    const today = getLocalDateString()
     const callsToday = calls.filter(c => c.created_at?.startsWith(today))
     const bookingsToday = callsToday.filter(c => c.appointment_booked)
     const urgentCalls = calls.filter(c => c.urgent && c.created_at?.startsWith(today))
@@ -573,11 +591,69 @@ export default function DashboardPage() {
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <button className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors relative ${isDark ? "hover:bg-[#1A1A16] text-[#6A6A62]" : "hover:bg-cream text-ink-3"
-                            }`}>
-                            <Bell size={17} />
-                            {urgentCalls.length > 0 && <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full" />}
-                        </button>
+                        <div className="relative">
+                            <button
+                                onClick={() => { setBellOpen(p => !p); setNotificationsRead(true) }}
+                                className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors relative ${isDark ? "hover:bg-[#1A1A16] text-[#6A6A62]" : "hover:bg-cream text-ink-3"}`}
+                            >
+                                <Bell size={17} />
+                                {urgentCalls.length > 0 && !notificationsRead && (
+                                    <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full" />
+                                )}
+                            </button>
+
+                            {bellOpen && (
+                                <>
+                                    <div className="fixed inset-0 z-40" onClick={() => setBellOpen(false)} />
+                                    <div className={`absolute right-0 top-11 z-50 w-80 rounded-xl border shadow-lg overflow-hidden ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
+                                        <div className={`px-4 py-3 border-b flex items-center justify-between ${isDark ? "border-[#2A2A26]" : "border-border"}`}>
+                                            <p className={`text-xs font-sans font-500 ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>Notifications</p>
+                                            {urgentCalls.length > 0 && (
+                                                <span className="text-2xs font-sans text-red-500 font-500">{urgentCalls.length} urgent</span>
+                                            )}
+                                        </div>
+                                        {urgentCalls.length === 0 ? (
+                                            <div className="px-4 py-8 text-center">
+                                                <p className={`text-xs font-sans ${isDark ? "text-[#6A6A62]" : "text-ink-3"}`}>No urgent alerts today</p>
+                                            </div>
+                                        ) : (
+                                            <div className="max-h-72 overflow-y-auto">
+                                                {urgentCalls.map(call => (
+                                                    <button
+                                                        key={call.id}
+                                                        onClick={() => { setActive("calls"); setBellOpen(false) }}
+                                                        className={`w-full px-4 py-3 flex items-start gap-3 text-left transition-colors border-b last:border-0 ${isDark ? "border-[#2A2A26] hover:bg-[#0F0F0D]" : "border-border hover:bg-cream"}`}
+                                                    >
+                                                        <div className="w-7 h-7 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                                            <AlertTriangle size={12} className="text-red-500" />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className={`text-xs font-sans font-500 truncate ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>
+                                                                {call.caller_name || call.caller_number || "Unknown caller"}
+                                                            </p>
+                                                            <p className="text-2xs font-sans text-ink-3 truncate mt-0.5">
+                                                                {call.reason || "Flagged as urgent"}
+                                                            </p>
+                                                            <p className="text-2xs font-sans text-ink-3 mt-0.5">{timeAgo(call.created_at)}</p>
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {urgentCalls.length > 0 && (
+                                            <div className={`px-4 py-2.5 border-t ${isDark ? "border-[#2A2A26]" : "border-border"}`}>
+                                                <button
+                                                    onClick={() => { setActive("calls"); setCallFilter("Urgent"); setBellOpen(false) }}
+                                                    className="text-xs font-sans text-gold hover:text-gold-dark transition-colors"
+                                                >
+                                                    View all urgent calls →
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
+                            )}
+                        </div>
                         <div className="w-9 h-9 bg-gold rounded-lg flex items-center justify-center text-xs font-sans font-600 text-ink">
                             {business?.name?.charAt(0) || "B"}
                         </div>
@@ -1088,7 +1164,6 @@ export default function DashboardPage() {
                     {active === "billing" && (
                         <div className="space-y-6 animate-[fadeIn_0.3s_ease] max-w-2xl">
 
-                            {/* Current plan + usage */}
                             <div className={`rounded-xl border p-6 ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
                                 <div className="flex items-start justify-between mb-6">
                                     <div>
@@ -1113,7 +1188,6 @@ export default function DashboardPage() {
                                     </span>
                                 </div>
 
-                                {/* Minutes usage bar */}
                                 <div className="mb-2 flex items-center justify-between">
                                     <p className="text-xs font-sans font-500 text-ink-3">Minutes used this month</p>
                                     <p className={`text-xs font-sans font-500 ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>
@@ -1132,7 +1206,6 @@ export default function DashboardPage() {
                                     </p>
                                 )}
 
-                                {/* Manage button for active subscribers */}
                                 {subscription?.isActive && (
                                     <Button variant="outline" size="sm" className="mt-5" onClick={handleManageBilling} disabled={billingLoading}>
                                         {billingLoading ? "Loading..." : "Manage subscription →"}
@@ -1140,7 +1213,6 @@ export default function DashboardPage() {
                                 )}
                             </div>
 
-                            {/* Upgrade plans — hide if already on pro */}
                             {(!subscription?.isActive || subscription?.plan === "growth") && (
                                 <div className={`rounded-xl border p-6 ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
                                     <h3 className={`font-serif text-lg mb-1 ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>
@@ -1201,7 +1273,6 @@ export default function DashboardPage() {
                                 </div>
                             )}
 
-                            {/* Already on Pro */}
                             {subscription?.isActive && subscription?.plan === "pro" && (
                                 <div className={`rounded-xl border p-6 ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
                                     <div className="flex items-center gap-4">

@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 
 export async function middleware(req: NextRequest) {
-    const res = NextResponse.next()
+    let res = NextResponse.next({
+        request: {
+            headers: req.headers,
+        },
+    })
 
     const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -26,17 +30,24 @@ export async function middleware(req: NextRequest) {
 
     const { pathname } = req.nextUrl
 
+    const cloneCookies = (redirectResponse: NextResponse) => {
+        res.cookies.getAll().forEach((cookie) => {
+            redirectResponse.cookies.set(cookie.name, cookie.value)
+        })
+        return redirectResponse
+    }
+
     // Protect dashboard and onboarding
     if (pathname.startsWith("/dashboard") || pathname.startsWith("/onboarding")) {
         if (!user) {
-            return NextResponse.redirect(new URL("/login", req.url))
+            return cloneCookies(NextResponse.redirect(new URL("/login", req.url)))
         }
     }
 
     // Redirect logged-in users away from auth pages
     if (pathname === "/login" || pathname === "/signup") {
         if (user) {
-            return NextResponse.redirect(new URL("/dashboard", req.url))
+            return cloneCookies(NextResponse.redirect(new URL("/dashboard", req.url)))
         }
     }
 

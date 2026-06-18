@@ -26,20 +26,22 @@ async function getAuthenticatedClient(businessId: string) {
     const oauth2Client = getOAuthClient()
     oauth2Client.setCredentials(business.calendar_token)
 
-    // Auto refresh token if expired
+    // FIX: The tokens event fires with a new access_token on every refresh,
+    // but Google only returns refresh_token on the very first authorization.
+    // We must always persist access_token + expiry_date, and only update
+    // refresh_token if a new one actually came back.
     oauth2Client.on("tokens", async (tokens) => {
-        if (tokens.refresh_token) {
-            await supabase
-                .from("businesses")
-                .update({
-                    calendar_token: {
-                        ...business.calendar_token,
-                        access_token: tokens.access_token,
-                        expiry_date: tokens.expiry_date,
-                    },
-                })
-                .eq("id", businessId)
+        const updated = {
+            ...business.calendar_token,
+            access_token: tokens.access_token,
+            expiry_date: tokens.expiry_date,
+            ...(tokens.refresh_token && { refresh_token: tokens.refresh_token }),
         }
+
+        await supabase
+            .from("businesses")
+            .update({ calendar_token: updated })
+            .eq("id", businessId)
     })
 
     return oauth2Client
@@ -66,7 +68,6 @@ export async function getGoogleCalendarEvents(
             orderBy: "startTime",
         })
 
-        // Return booked time slots
         return (data.items || []).map(event => {
             const start = event.start?.dateTime || event.start?.date
             if (!start) return ""
@@ -103,7 +104,6 @@ export async function createGoogleCalendarEvent(
         const auth = await getAuthenticatedClient(businessId)
         const calendar = google.calendar({ version: "v3", auth })
 
-        // Parse time
         const [timePart, period] = time.split(" ")
         const [hours, minutes] = timePart.split(":").map(Number)
         let hour24 = hours
