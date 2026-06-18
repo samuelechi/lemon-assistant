@@ -269,11 +269,15 @@ export default function DashboardPage() {
                     .limit(50)
                 setCalls(callData || [])
 
+                const localToday = new Date()
+                localToday.setMinutes(localToday.getMinutes() - localToday.getTimezoneOffset())
+                const localTodayStr = localToday.toISOString().split("T")[0]
+
                 const { data: aptData } = await supabase
                     .from("appointments")
                     .select("*")
                     .eq("business_id", biz.id)
-                    .gte("date", new Date().toISOString().split("T")[0])
+                    .gte("date", localTodayStr)
                     .order("date", { ascending: true })
                     .order("time", { ascending: true })
                     .limit(20)
