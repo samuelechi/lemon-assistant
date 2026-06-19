@@ -298,6 +298,17 @@ export default function DashboardPage() {
         load()
     }, [])
 
+    // Refetch usage whenever the Billing tab is opened, so the minutes counter
+    // reflects calls that arrived after the page first loaded (tab switches are
+    // client-side and otherwise never refresh this number).
+    useEffect(() => {
+        if (active !== "billing") return
+        fetch("/api/stripe/status")
+            .then(res => (res.ok ? res.json() : null))
+            .then(data => { if (data) setSubscription(data) })
+            .catch(() => {})
+    }, [active])
+
     const handleLogout = async () => {
         await supabase.auth.signOut()
         router.push("/")
