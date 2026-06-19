@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
 
         const { data: business } = await supabase
             .from("businesses")
-            .select("id, vapi_assistant_id")
+            .select("id, vapi_assistant_id, name, ai_name, type, about, hours_start, hours_end, working_days, meeting_types, meeting_duration")
             .eq("user_id", user.id)
             .single()
 
@@ -52,11 +52,22 @@ export async function POST(req: NextRequest) {
             })
             .eq("user_id", user.id)
 
-        // Update Vapi assistant if it exists
+        // Update Vapi assistant in place (prompt + tools + greeting). Uses the
+        // new values where provided, falling back to the stored business values.
+        // Never recreates — the phone number is untouched.
         if (business.vapi_assistant_id) {
             await updateVapiAssistant(business.vapi_assistant_id, {
-                businessName: name,
-                aiName: ai_name,
+                businessName: name ?? business.name,
+                aiName: ai_name ?? business.ai_name,
+                businessType: type ?? business.type ?? "",
+                hoursStart: hours_start ?? business.hours_start,
+                hoursEnd: hours_end ?? business.hours_end,
+                workingDays: business.working_days || [],
+                meetingTypes: business.meeting_types || [],
+                meetingDuration: business.meeting_duration || 30,
+                about: about ?? business.about ?? "",
+                businessId: business.id,
+                appUrl: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
             })
         }
 

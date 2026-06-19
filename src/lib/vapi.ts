@@ -1,12 +1,7 @@
 const VAPI_API_KEY = process.env.VAPI_API_KEY!
 const VAPI_BASE = "https://api.vapi.ai"
 
-export async function createVapiAssistant({
-  businessName, aiName, businessType,
-  hoursStart, hoursEnd, workingDays,
-  meetingTypes, meetingDuration, about,
-  businessId, appUrl,
-}: {
+export type AssistantConfig = {
   businessName: string
   aiName: string
   businessType: string
@@ -18,8 +13,14 @@ export async function createVapiAssistant({
   about?: string
   businessId?: string
   appUrl?: string
-}) {
-  const systemPrompt = `
+}
+
+function buildSystemPrompt({
+  businessName, aiName, businessType,
+  hoursStart, hoursEnd, workingDays,
+  meetingTypes, meetingDuration, about,
+}: AssistantConfig): string {
+  return `
 You are ${aiName}, a professional and friendly AI receptionist for ${businessName}${businessType ? `, a ${businessType}` : ""}.
 
 ${about ? `About this business: ${about}` : ""}
@@ -57,8 +58,10 @@ ${meetingTypes.join(", ")} — each ${meetingDuration} minutes long.
 - If someone asks for the owner or staff, say they are unavailable and offer to book or take a message
 - Always be warm, calm, and professional
   `.trim()
+}
 
-  const tools = businessId && appUrl ? [
+function buildTools(businessId?: string, appUrl?: string) {
+  return businessId && appUrl ? [
     {
       type: "function",
       function: {
@@ -101,6 +104,12 @@ ${meetingTypes.join(", ")} — each ${meetingDuration} minutes long.
       },
     },
   ] : []
+}
+
+export async function createVapiAssistant(config: AssistantConfig) {
+  const { businessName, aiName, businessId, appUrl } = config
+  const systemPrompt = buildSystemPrompt(config)
+  const tools = buildTools(businessId, appUrl)
 
   const res = await fetch(`${VAPI_BASE}/assistant`, {
     method: "POST",
@@ -168,20 +177,15 @@ export async function createVapiPhoneNumber(assistantId: string, appUrl?: string
   return data
 }
 
-export async function updateVapiAssistant(
-  assistantId: string,
-  updates: {
-    businessName?: string
-    aiName?: string
-    businessType?: string
-    hoursStart?: string
-    hoursEnd?: string
-    workingDays?: string[]
-    meetingTypes?: string[]
-    meetingDuration?: number
-    about?: string
-  }
-) {
+// PATCHes the existing assistant in place — rebuilds the system prompt, tools,
+// greeting and name from the current business config. This does NOT touch the
+// phone number, so it's the safe way to push prompt changes to a live assistant
+// (unlike recreate, which provisions a new number).
+export async function updateVapiAssistant(assistantId: string, config: AssistantConfig) {
+  const { businessName, aiName, businessId, appUrl } = config
+  const systemPrompt = buildSystemPrompt(config)
+  const tools = buildTools(businessId, appUrl)
+
   const res = await fetch(`${VAPI_BASE}/assistant/${assistantId}`, {
     method: "PATCH",
     headers: {
@@ -189,9 +193,14 @@ export async function updateVapiAssistant(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      firstMessage: updates.businessName && updates.aiName
-        ? `Thank you for calling ${updates.businessName}, this is ${updates.aiName} speaking. How can I help you today?`
-        : undefined,
+      name: `${businessName} — ${aiName}`,
+      firstMessage: `Thank you for calling ${businessName}, this is ${aiName} speaking. How can I help you today?`,
+      model: {
+        provider: "openai",
+        model: "gpt-4o-mini",
+        systemPrompt,
+        tools,
+      },
     }),
   })
 
