@@ -308,7 +308,7 @@ export default function DashboardPage() {
         fetch("/api/stripe/status")
             .then(res => (res.ok ? res.json() : null))
             .then(data => { if (data) setSubscription(data) })
-            .catch(() => {})
+            .catch(() => { })
     }, [active])
 
     const handleLogout = async () => {
@@ -1217,16 +1217,16 @@ export default function DashboardPage() {
                                 <div className="mb-2 flex items-center justify-between">
                                     <p className="text-xs font-sans font-500 text-ink-3">Minutes used this month</p>
                                     <p className={`text-xs font-sans font-500 ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>
-                                        {subscription?.minutesUsed ?? minutesUsed} / {subscription?.minutesLimit ?? 13} min
+                                        {minutesUsed} / {subscription?.minutesLimit ?? 13} mins
                                     </p>
                                 </div>
                                 <div className={`w-full h-2 rounded-full overflow-hidden ${isDark ? "bg-[#2A2A26]" : "bg-cream-2"}`}>
                                     <div
-                                        className={`h-2 rounded-full transition-all duration-500 ${(subscription?.percentUsed ?? 0) >= 90 ? "bg-red-400" : "bg-gold"}`}
-                                        style={{ width: `${Math.min(subscription?.percentUsed ?? 0, 100)}%` }}
+                                        className={`h-2 rounded-full transition-all duration-500 ${Math.round((minutesUsed / (subscription?.minutesLimit ?? 13)) * 100) >= 90 ? "bg-red-400" : "bg-gold"}`}
+                                        style={{ width: `${Math.min(Math.round((minutesUsed / (subscription?.minutesLimit ?? 13)) * 100), 100)}%` }}
                                     />
                                 </div>
-                                {(subscription?.percentUsed ?? 0) >= 80 && (
+                                {(Math.round((minutesUsed / (subscription?.minutesLimit ?? 13)) * 100)) >= 80 && (
                                     <p className="text-2xs font-sans text-red-500 mt-2 flex items-center gap-1">
                                         <AlertTriangle size={10} /> You&apos;re running low on minutes
                                     </p>
