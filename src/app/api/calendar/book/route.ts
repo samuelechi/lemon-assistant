@@ -25,6 +25,44 @@ function normalizeFutureDate(dateStr: string): string {
     return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`
 }
 
+// Normalize a phone number to E.164 so Twilio accepts it.
+function toE164(raw: unknown): string {
+    if (!raw) return ""
+    const s = String(raw).trim()
+    if (s.startsWith("+")) return s.replace(/[^\d+]/g, "")
+    const d = s.replace(/\D/g, "")
+    if (d.length === 10) return `+1${d}`
+    if (d.length === 11 && d.startsWith("1")) return `+${d}`
+    return d ? `+${d}` : ""
+}
+
+// Text the caller a booking confirmation. Best-effort: failures are logged but
+// never block the booking itself.
+async function sendCallerConfirmation(opts: {
+    toNumber: string
+    callerName: string
+    businessName: string
+    date: string
+    time: string
+    type: string
+}) {
+    try {
+        if (!opts.toNumber || !process.env.TWILIO_PHONE_NUMBER) return
+        const twilio = require("twilio")(
+            process.env.TWILIO_ACCOUNT_SID,
+            process.env.TWILIO_AUTH_TOKEN
+        )
+        const msg = `Hi ${opts.callerName}, your ${opts.type} with ${opts.businessName} is confirmed for ${opts.date} at ${opts.time}. See you then!`
+        await twilio.messages.create({
+            body: msg,
+            from: process.env.TWILIO_PHONE_NUMBER,
+            to: opts.toNumber,
+        })
+    } catch (err) {
+        console.error("Caller confirmation SMS error:", err)
+    }
+}
+
 async function checkMinuteLimit(businessId: string): Promise<{ allowed: boolean; reason?: string }> {
     const { data: business } = await supabase
         .from("businesses")
@@ -84,7 +122,13 @@ export async function POST(req: NextRequest) {
         const { callerName, callerPhone, time, type } = args ?? {}
         const date = args?.date ? normalizeFutureDate(args.date) : args?.date
 
-        console.log("BOOK:", { businessId, callerName, rawDate: args?.date, date, time, toolCallId })
+        // The caller's number: prefer one the AI collected, otherwise fall back
+        // to the inbound caller ID Vapi provides — so we can text a confirmation
+        // even when the assistant never asks for a number.
+        const inboundNumber = body?.message?.call?.customer?.number || body?.message?.customer?.number || ""
+        const resolvedCallerPhone = toE164(callerPhone) || inboundNumber
+
+        console.log("BOOK:", { businessId, callerName, rawDate: args?.date, date, time, resolvedCallerPhone, toolCallId })
 
         if (!businessId || !callerName || !date || !time) {
             return NextResponse.json({
@@ -131,26 +175,24 @@ export async function POST(req: NextRequest) {
             })
         }
 
-        const { data: appointment, error } = await supabase
+        const { error } = await supabase
             .from("appointments")
             .insert({
                 business_id: businessId,
                 caller_name: callerName,
-                caller_phone: callerPhone || "",
+                caller_phone: resolvedCallerPhone,
                 date,
                 time,
                 type: type || "Appointment",
                 status: "confirmed",
             })
-            .select()
-            .single()
 
         if (error) throw error
 
         if (business.calendar_type === "google" && business.calendar_token) {
             await createGoogleCalendarEvent(businessId, {
                 callerName,
-                callerPhone: callerPhone || "",
+                callerPhone: resolvedCallerPhone,
                 date,
                 time,
                 type: type || "Appointment",
@@ -158,6 +200,16 @@ export async function POST(req: NextRequest) {
                 businessName: business.name,
             })
         }
+
+        // Text the caller their confirmation (best-effort; never blocks booking).
+        await sendCallerConfirmation({
+            toNumber: resolvedCallerPhone,
+            callerName,
+            businessName: business.name,
+            date,
+            time,
+            type: type || "appointment",
+        })
 
         return NextResponse.json({
             results: [{

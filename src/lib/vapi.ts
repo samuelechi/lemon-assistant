@@ -36,9 +36,11 @@ current year, and never book a date in the past.
 3. Ask for the reason for their call
 4. If they want to book an appointment, use the checkAvailability tool to find open slots
 5. Offer the available slots to the caller
-6. Use the bookAppointment tool to confirm the booking
-7. Tell them they will receive an SMS confirmation
-8. Thank them and end the call
+6. Confirm the best mobile number to text the confirmation to. If they're happy
+   to use the number they're calling from, that's fine — otherwise ask for one.
+7. Use the bookAppointment tool to confirm the booking, passing callerPhone
+8. Tell them they will receive an SMS confirmation at that number
+9. Thank them and end the call
 
 ## Business hours:
 Open ${hoursStart} to ${hoursEnd}, ${workingDays.join(", ")}.
