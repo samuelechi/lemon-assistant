@@ -281,6 +281,18 @@ function detectBooking(summary: string): boolean {
     return bookingWords.some(w => text.includes(w))
 }
 
+// The owner's notification number lives on the business record (set in
+// Settings). This is where after-call texts and usage alerts are sent.
+async function getNotificationPhone(businessId: string): Promise<string | null> {
+    const { data: business } = await supabase
+        .from("businesses")
+        .select("notification_phone")
+        .eq("id", businessId)
+        .single()
+    const phone = business?.notification_phone?.trim()
+    return phone ? phone : null
+}
+
 async function sendOwnerSummary({
     businessId,
     businessName,
@@ -298,17 +310,11 @@ async function sendOwnerSummary({
     summary: string
 }) {
     try {
-        const { data: profile } = await supabase
-            .from("businesses")
-            .select("user_id")
-            .eq("id", businessId)
-            .single()
-
-        if (!profile) return
-
-        const { data: user } = await supabase.auth.admin.getUserById(profile.user_id)
-        const ownerPhone = user?.user?.phone
-        if (!ownerPhone) return
+        const ownerPhone = await getNotificationPhone(businessId)
+        if (!ownerPhone) {
+            console.log("No notification_phone set for business", businessId, "— skipping SMS")
+            return
+        }
 
         const twilio = require("twilio")(
             process.env.TWILIO_ACCOUNT_SID,
@@ -337,8 +343,7 @@ async function sendUsageAlert(
     usage: MinuteUsage,
 ) {
     try {
-        const { data: user } = await supabase.auth.admin.getUserById(usage.userId)
-        const ownerPhone = user?.user?.phone
+        const ownerPhone = await getNotificationPhone(businessId)
         if (!ownerPhone) return
 
         const twilio = require("twilio")(

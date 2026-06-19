@@ -194,6 +194,7 @@ export default function DashboardPage() {
         about: "",
         hoursStart: "09:00",
         hoursEnd: "17:00",
+        notificationPhone: "",
     })
     const [availability, setAvailability] = useState(
         ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map(day => ({
@@ -226,7 +227,7 @@ export default function DashboardPage() {
 
                 const { data: biz } = await supabase
                     .from("businesses")
-                    .select("id, name, ai_name, type, phone_number, vapi_assistant_id, hours_start, hours_end, calendar_type, about")
+                    .select("id, name, ai_name, type, phone_number, vapi_assistant_id, hours_start, hours_end, calendar_type, about, notification_phone")
                     .eq("user_id", user.id)
                     .maybeSingle()
 
@@ -241,6 +242,7 @@ export default function DashboardPage() {
                     about: biz.about || "",
                     hoursStart: biz.hours_start || "09:00",
                     hoursEnd: biz.hours_end || "17:00",
+                    notificationPhone: biz.notification_phone || "",
                 })
 
                 const { data: blocked } = await supabase
@@ -389,6 +391,7 @@ export default function DashboardPage() {
                     about: settingsForm.about,
                     hours_start: settingsForm.hoursStart,
                     hours_end: settingsForm.hoursEnd,
+                    notification_phone: settingsForm.notificationPhone,
                 }),
             })
             if (res.ok) {
@@ -1104,6 +1107,14 @@ export default function DashboardPage() {
                                             onChange={e => setSettingsForm(p => ({ ...p, aiGreeting: e.target.value }))}
                                             placeholder={`Thank you for calling ${business?.name || "us"}, this is ${business?.ai_name || "Lisa"}, how can I help?`}
                                             className={`w-full px-4 py-2.5 text-sm font-sans border rounded-lg focus:outline-none focus:border-gold transition-colors ${isDark ? "bg-[#0F0F0D] border-[#2A2A26] text-[#F0EFE8] placeholder:text-[#444440]" : "bg-white border-border text-ink placeholder:text-ink-3"}`} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-2xs font-sans font-500 text-ink-3 mb-1.5 tracking-[0.1em] uppercase">Notification phone</label>
+                                        <input type="tel" value={settingsForm.notificationPhone}
+                                            onChange={e => setSettingsForm(p => ({ ...p, notificationPhone: e.target.value }))}
+                                            placeholder="+1 431 555 0123"
+                                            className={`w-full px-4 py-2.5 text-sm font-sans border rounded-lg focus:outline-none focus:border-gold transition-colors ${isDark ? "bg-[#0F0F0D] border-[#2A2A26] text-[#F0EFE8] placeholder:text-[#444440]" : "bg-white border-border text-ink placeholder:text-ink-3"}`} />
+                                        <p className="text-2xs text-ink-3 font-sans mt-1">Your personal cell — we text you a summary after each call and when you near your minute limit</p>
                                     </div>
                                 </div>
                                 <Button variant="gold" size="sm" className="mt-5" disabled={saving} onClick={() => saveSettings("AI Agent")}>

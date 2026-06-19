@@ -9,7 +9,25 @@ export async function POST(req: NextRequest) {
         if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
         const body = await req.json()
-        const { ai_name, ai_greeting, name, type, about, hours_start, hours_end } = body
+        const { ai_name, ai_greeting, name, type, about, hours_start, hours_end, notification_phone } = body
+
+        // Normalize the notification number to E.164 so Twilio accepts it.
+        // Accepts a bare 10-digit NANP number or a leading "1", else passes
+        // through (already-+ prefixed numbers are kept as-is).
+        let normalizedPhone: string | undefined
+        if (notification_phone !== undefined) {
+            const raw = String(notification_phone).trim()
+            if (raw === "") {
+                normalizedPhone = "" // allow clearing it
+            } else if (raw.startsWith("+")) {
+                normalizedPhone = raw.replace(/[^\d+]/g, "")
+            } else {
+                const digits = raw.replace(/\D/g, "")
+                if (digits.length === 10) normalizedPhone = `+1${digits}`
+                else if (digits.length === 11 && digits.startsWith("1")) normalizedPhone = `+${digits}`
+                else normalizedPhone = `+${digits}`
+            }
+        }
 
         const { data: business } = await supabase
             .from("businesses")
@@ -30,6 +48,7 @@ export async function POST(req: NextRequest) {
                 ...(about !== undefined && { about }),
                 ...(hours_start && { hours_start }),
                 ...(hours_end && { hours_end }),
+                ...(normalizedPhone !== undefined && { notification_phone: normalizedPhone }),
             })
             .eq("user_id", user.id)
 
