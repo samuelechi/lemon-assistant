@@ -6,14 +6,25 @@ const supabase = createClient(
     process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-async function checkMinuteLimit(businessId: string): Promise<{ allowed: boolean; reason?: string }> {
+type MinuteUsage = {
+    userId: string
+    plan: string
+    isActive: boolean
+    limit: number
+    minutesUsed: number
+    totalSeconds: number
+}
+
+// Single source of truth for "how many minutes has this business used this month".
+// Both the live call gate and the usage-alert SMS read from this so their numbers agree.
+async function getMinuteUsage(businessId: string): Promise<MinuteUsage | null> {
     const { data: business } = await supabase
         .from("businesses")
         .select("user_id")
         .eq("id", businessId)
         .single()
 
-    if (!business) return { allowed: false, reason: "Business not found." }
+    if (!business) return null
 
     const { data: sub } = await supabase
         .from("subscriptions")
@@ -27,7 +38,8 @@ async function checkMinuteLimit(businessId: string): Promise<{ allowed: boolean;
         trial: 13,
     }
 
-    const plan = sub?.status === "active" ? sub.plan : "trial"
+    const isActive = sub?.status === "active"
+    const plan = isActive ? sub!.plan : "trial"
     const limit = planLimits[plan] ?? 13
 
     const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
@@ -37,14 +49,20 @@ async function checkMinuteLimit(businessId: string): Promise<{ allowed: boolean;
         .eq("business_id", businessId)
         .gte("created_at", startOfMonth)
 
-    const minutesUsed = Math.round(
-        (calls || []).reduce((sum, c) => sum + (c.duration_seconds || 0), 0) / 60
-    )
+    const totalSeconds = (calls || []).reduce((sum, c) => sum + (c.duration_seconds || 0), 0)
+    const minutesUsed = Math.round(totalSeconds / 60)
 
-    if (minutesUsed >= limit) {
-        const reason = sub?.status === "active"
-            ? `${plan} plan limit of ${limit} minutes reached`
-            : `Trial limit of ${limit} minutes reached`
+    return { userId: business.user_id, plan, isActive, limit, minutesUsed, totalSeconds }
+}
+
+async function checkMinuteLimit(businessId: string): Promise<{ allowed: boolean; reason?: string }> {
+    const usage = await getMinuteUsage(businessId)
+    if (!usage) return { allowed: false, reason: "Business not found." }
+
+    if (usage.minutesUsed >= usage.limit) {
+        const reason = usage.isActive
+            ? `${usage.plan} plan limit of ${usage.limit} minutes reached`
+            : `Trial limit of ${usage.limit} minutes reached`
         return { allowed: false, reason }
     }
 
@@ -200,6 +218,24 @@ export async function POST(req: NextRequest) {
             appointmentBooked,
             summary,
         })
+
+        // Usage alerts: warn the owner once when this call crosses 80% of their
+        // limit, and once when it hits 100% (line now paused). We compare the
+        // total before vs. after this call so each alert fires exactly once —
+        // not on every subsequent call.
+        if (duration > 0) {
+            const usage = await getMinuteUsage(business.id)
+            if (usage) {
+                const prevMinutes = Math.round(Math.max(0, usage.totalSeconds - duration) / 60)
+                const warnAt = Math.floor(usage.limit * 0.8)
+
+                if (prevMinutes < usage.limit && usage.minutesUsed >= usage.limit) {
+                    await sendUsageAlert(business.id, business.name, "reached", usage)
+                } else if (prevMinutes < warnAt && usage.minutesUsed >= warnAt) {
+                    await sendUsageAlert(business.id, business.name, "warning", usage)
+                }
+            }
+        }
 
         return NextResponse.json({ success: true })
     } catch (err) {
@@ -366,5 +402,47 @@ async function sendOwnerSummary({
         })
     } catch (err) {
         console.error("SMS error:", err)
+    }
+}
+
+// Text the owner when they approach ("warning") or exhaust ("reached") their
+// monthly minutes, so a paused line is never a surprise.
+async function sendUsageAlert(
+    businessId: string,
+    businessName: string,
+    kind: "warning" | "reached",
+    usage: MinuteUsage,
+) {
+    try {
+        const { data: user } = await supabase.auth.admin.getUserById(usage.userId)
+        const ownerPhone = user?.user?.phone
+        if (!ownerPhone) return
+
+        const twilio = require("twilio")(
+            process.env.TWILIO_ACCOUNT_SID,
+            process.env.TWILIO_AUTH_TOKEN
+        )
+
+        const remaining = Math.max(0, usage.limit - usage.minutesUsed)
+        const isTrial = !usage.isActive
+
+        let msg: string
+        if (kind === "reached") {
+            msg = isTrial
+                ? `⛔ ${businessName} — your ${usage.limit}-minute free trial is used up and your AI line is now paused. Upgrade to keep receiving calls.`
+                : `⛔ ${businessName} — you've used all ${usage.limit} minutes on your ${usage.plan} plan this month. Your AI line is paused until your next billing cycle or an upgrade.`
+        } else {
+            msg = isTrial
+                ? `⚠️ ${businessName} — you've used ${usage.minutesUsed} of your ${usage.limit} free trial minutes (${remaining} left). Upgrade soon so your AI line doesn't pause.`
+                : `⚠️ ${businessName} — you've used ${usage.minutesUsed} of ${usage.limit} minutes on your ${usage.plan} plan (${remaining} left this month).`
+        }
+
+        await twilio.messages.create({
+            body: msg,
+            from: process.env.TWILIO_PHONE_NUMBER,
+            to: ownerPhone,
+        })
+    } catch (err) {
+        console.error("Usage alert SMS error:", err)
     }
 }
