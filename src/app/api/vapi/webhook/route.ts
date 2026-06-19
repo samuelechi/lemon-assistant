@@ -175,7 +175,7 @@ export async function POST(req: NextRequest) {
         const isUrgent = detectUrgency(transcript, summary)
         const appointmentBooked = detectBooking(summary)
 
-        const { data: savedCall } = await supabase
+        await supabase
             .from("calls")
             .insert({
                 business_id: business.id,
@@ -189,25 +189,13 @@ export async function POST(req: NextRequest) {
                 summary,
                 transcript,
             })
-            .select()
-            .single()
 
-        // FIX 3: Appointment date extraction now returns a real YYYY-MM-DD string
-        if (appointmentBooked && savedCall) {
-            const appointment = extractAppointment(summary)
-            if (appointment) {
-                await supabase.from("appointments").insert({
-                    business_id: business.id,
-                    call_id: savedCall.id,
-                    caller_name: callerName || "Unknown",
-                    caller_phone: call?.customer?.number || "",
-                    date: appointment.date,
-                    time: appointment.time,
-                    type: appointment.type || "Appointment",
-                    status: "confirmed",
-                })
-            }
-        }
+        // NOTE: We intentionally do NOT create an appointment here. The
+        // bookAppointment tool (src/app/api/calendar/book) is the single source
+        // of truth — it runs during the call, reserves the slot, and creates the
+        // calendar event. Parsing the summary here created a duplicate row, often
+        // with a wrong date. The call is still flagged "booked" (above) and the
+        // owner is notified below, so nothing is lost.
 
         await sendOwnerSummary({
             businessId: business.id,
@@ -291,71 +279,6 @@ function detectBooking(summary: string): boolean {
     const text = summary.toLowerCase()
     const bookingWords = ["booked", "scheduled", "appointment confirmed", "set for", "confirmed for", "appointment for"]
     return bookingWords.some(w => text.includes(w))
-}
-
-// FIX 3: Resolve natural language dates to real YYYY-MM-DD strings
-// so the appointments table stores queryable dates, not "thursday"
-function extractAppointment(summary: string): {
-    date: string; time: string; type: string
-} | null {
-    if (!summary) return null
-
-    const timeMatch = summary.match(/\d{1,2}(?::\d{2})?\s*(?:am|pm)/i)
-    const typeMatch = summary.match(
-        /(?:consultation|appointment|checkup|check-up|follow-up|viewing|estimate|reservation|service|visit)/i
-    )
-
-    // Try to resolve a named day to a real date
-    const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]
-    const dayMatch = summary.match(
-        /\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i
-    )
-
-    // Try explicit date like "June 20th" or "June 20"
-    const explicitDateMatch = summary.match(
-        /\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})(?:st|nd|rd|th)?\b/i
-    )
-
-    let resolvedDate = new Date().toISOString().split("T")[0]
-
-    if (explicitDateMatch) {
-        const monthStr = explicitDateMatch[1]
-        const day = parseInt(explicitDateMatch[2])
-        const months: Record<string, number> = {
-            january: 0, february: 1, march: 2, april: 3, may: 4, june: 5,
-            july: 6, august: 7, september: 8, october: 9, november: 10, december: 11
-        }
-        const month = months[monthStr.toLowerCase()]
-        const year = new Date().getFullYear()
-        const candidate = new Date(year, month, day)
-        // If date already passed this year, use next year
-        if (candidate < new Date()) candidate.setFullYear(year + 1)
-        resolvedDate = candidate.toISOString().split("T")[0]
-    } else if (dayMatch) {
-        const targetDay = dayNames.indexOf(dayMatch[1].toLowerCase())
-        const today = new Date()
-        const currentDay = today.getDay()
-        let daysUntil = targetDay - currentDay
-        if (daysUntil <= 0) daysUntil += 7 // always next occurrence
-        const target = new Date(today)
-        target.setDate(today.getDate() + daysUntil)
-        resolvedDate = target.toISOString().split("T")[0]
-    } else if (/\btoday\b/i.test(summary)) {
-        resolvedDate = new Date().toISOString().split("T")[0]
-    } else if (/\btomorrow\b/i.test(summary)) {
-        const tomorrow = new Date()
-        tomorrow.setDate(tomorrow.getDate() + 1)
-        resolvedDate = tomorrow.toISOString().split("T")[0]
-    } else if (!timeMatch) {
-        // No date and no time — not enough info to save an appointment
-        return null
-    }
-
-    return {
-        date: resolvedDate,
-        time: timeMatch?.[0] || "12:00 PM",
-        type: typeMatch?.[0] || "Appointment",
-    }
 }
 
 async function sendOwnerSummary({

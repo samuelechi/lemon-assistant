@@ -7,6 +7,24 @@ const supabase = createClient(
     process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+// The Vapi assistant doesn't inherently know today's date, so it sometimes
+// fills in a past year (e.g. "2024-08-15"). Roll any past date forward to the
+// next occurrence of that month/day so a booking never lands in the past.
+// This is a safety net — the real fix is giving the assistant the current date
+// in its system prompt (see src/lib/vapi.ts).
+function normalizeFutureDate(dateStr: string): string {
+    const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(String(dateStr).trim())
+    if (!m) return dateStr
+    let year = parseInt(m[1], 10)
+    const month = parseInt(m[2], 10)
+    const day = parseInt(m[3], 10)
+    const now = new Date()
+    const todayKey = now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate()
+    const keyFor = (y: number) => y * 10000 + month * 100 + day
+    while (keyFor(year) < todayKey) year++
+    return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+}
+
 async function checkMinuteLimit(businessId: string): Promise<{ allowed: boolean; reason?: string }> {
     const { data: business } = await supabase
         .from("businesses")
@@ -63,9 +81,10 @@ export async function POST(req: NextRequest) {
         const toolCallId = toolCall?.id ?? ""
         const rawArgs = toolCall?.function?.arguments
         const args = typeof rawArgs === "string" ? JSON.parse(rawArgs) : rawArgs
-        const { callerName, callerPhone, date, time, type } = args ?? {}
+        const { callerName, callerPhone, time, type } = args ?? {}
+        const date = args?.date ? normalizeFutureDate(args.date) : args?.date
 
-        console.log("BOOK:", { businessId, callerName, date, time, toolCallId })
+        console.log("BOOK:", { businessId, callerName, rawDate: args?.date, date, time, toolCallId })
 
         if (!businessId || !callerName || !date || !time) {
             return NextResponse.json({
