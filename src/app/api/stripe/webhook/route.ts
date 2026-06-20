@@ -68,10 +68,9 @@ async function provisionPhoneNumber(userId: string, areaCode: string) {
         if (!searchRes.ok) throw new Error(`Twilio search failed: ${await searchRes.text()}`)
 
         const searchData = await searchRes.json()
-        const available = searchData.available_phone_numbers
+        let numberToBuy = searchData.available_phone_numbers?.[0]?.phone_number
 
-        // Fallback to 416 (Ontario) if no numbers in requested area code
-        let numberToBuy = available?.[0]?.phone_number
+        // Fallback to 416 if no numbers in requested area code
         if (!numberToBuy) {
             console.log(`No numbers for area code ${areaCode}, falling back to 416`)
             const fallbackRes = await fetch(
@@ -131,7 +130,6 @@ async function provisionPhoneNumber(userId: string, areaCode: string) {
         console.log(`Provisioned number ${buyData.phone_number} for user ${userId}`)
     } catch (err) {
         console.error("Phone provisioning failed:", err)
-        // Non-fatal — subscription is still active, number can be retried
     }
 }
 
@@ -149,15 +147,25 @@ export async function POST(req: NextRequest) {
 
     try {
         switch (event.type) {
+
+            // $2.50 trial activation — provision phone number
             case "checkout.session.completed": {
                 const session = event.data.object as Stripe.Checkout.Session
                 const userId = session.metadata?.userId
                 const businessId = session.metadata?.businessId
-                const plan = session.metadata?.plan
                 const areaCode = session.metadata?.areaCode || "416"
+                const type = session.metadata?.type
 
                 if (!userId || !businessId) break
 
+                if (type === "trial_activation") {
+                    // One-time payment — just provision the number
+                    await provisionPhoneNumber(userId, areaCode)
+                    break
+                }
+
+                // Subscription upgrade checkout
+                const plan = session.metadata?.plan
                 const subscription = await stripe.subscriptions.retrieve(session.subscription as string)
 
                 await supabase.from("subscriptions").upsert({
@@ -172,7 +180,7 @@ export async function POST(req: NextRequest) {
 
                 await patchVapiAssistant(userId, 600)
 
-                // Provision Canadian phone number on first upgrade
+                // Provision number on upgrade if they didn't do trial activation
                 await provisionPhoneNumber(userId, areaCode)
                 break
             }

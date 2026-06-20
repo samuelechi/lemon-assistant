@@ -100,9 +100,6 @@ function formatDate(dateStr: string): string {
     return date.toLocaleDateString("en-CA", { weekday: "short", month: "short", day: "numeric" })
 }
 
-// FIX 1: Timezone-safe local date string
-// toISOString() returns UTC, which rolls over 5-6 hrs early in North America.
-// This adjusts for the local timezone offset so "today" matches the user's clock.
 function getLocalDateString(): string {
     const d = new Date()
     d.setMinutes(d.getMinutes() - d.getTimezoneOffset())
@@ -132,10 +129,8 @@ function StatCard({ icon, label, value, sub, accent, isDark }: {
     icon: React.ReactNode; label: string; value: string; sub?: string; accent?: boolean; isDark: boolean
 }) {
     return (
-        <div className={`rounded-xl border p-5 transition-all duration-200 hover:shadow-sm ${accent ? "bg-gold border-gold-light" : isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"
-            }`}>
-            <div className={`w-9 h-9 rounded-lg flex items-center justify-center mb-4 ${accent ? "bg-white/20 text-white" : isDark ? "bg-[#2A2A26] text-gold" : "bg-gold-pale text-gold"
-                }`}>
+        <div className={`rounded-xl border p-5 transition-all duration-200 hover:shadow-sm ${accent ? "bg-gold border-gold-light" : isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
+            <div className={`w-9 h-9 rounded-lg flex items-center justify-center mb-4 ${accent ? "bg-white/20 text-white" : isDark ? "bg-[#2A2A26] text-gold" : "bg-gold-pale text-gold"}`}>
                 {icon}
             </div>
             <div className={`font-serif text-3xl mb-1 ${accent ? "text-white" : isDark ? "text-[#F0EFE8]" : "text-ink"}`}>
@@ -156,8 +151,7 @@ function StatCard({ icon, label, value, sub, accent, isDark }: {
 function EmptyState({ icon, title, sub, isDark }: { icon: React.ReactNode; title: string; sub: string; isDark: boolean }) {
     return (
         <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${isDark ? "bg-[#2A2A26] text-[#444440]" : "bg-cream-2 text-ink-3"
-                }`}>
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${isDark ? "bg-[#2A2A26] text-[#444440]" : "bg-cream-2 text-ink-3"}`}>
                 {icon}
             </div>
             <p className={`font-serif text-lg mb-1 ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>{title}</p>
@@ -215,11 +209,12 @@ export default function DashboardPage() {
         const cal = params.get("calendar")
         if (cal === "connected") setCalendarStatus("Google Calendar connected successfully!")
         if (cal === "error") setCalendarStatus("Failed to connect Google Calendar. Try again.")
+        const activation = params.get("activation")
+        if (activation === "success") setCalendarStatus("Trial activated! Your Canadian number will be assigned shortly.")
+        if (activation === "cancelled") setCalendarStatus("Activation cancelled. You can try again anytime.")
     }, [])
 
     useEffect(() => {
-        // FIX 2: try/catch/finally so a failed fetch doesn't leave the user
-        // stuck on a permanent loading spinner with no way out.
         const load = async () => {
             setLoading(true)
             try {
@@ -301,9 +296,6 @@ export default function DashboardPage() {
         load()
     }, [])
 
-    // Refetch usage whenever the Billing tab is opened, so the minutes counter
-    // reflects calls that arrived after the page first loaded (tab switches are
-    // client-side and otherwise never refresh this number).
     useEffect(() => {
         if (active !== "billing") return
         fetch("/api/stripe/status")
@@ -367,9 +359,9 @@ export default function DashboardPage() {
                 }),
             })
             const data = await res.json()
-            if (data.phoneNumber) {
-                setBusiness(prev => prev ? { ...prev, phone_number: data.phoneNumber, vapi_assistant_id: data.assistantId } : prev)
-                setCalendarStatus("Setup complete! Your AI is now live.")
+            if (data.assistantId) {
+                setBusiness(prev => prev ? { ...prev, vapi_assistant_id: data.assistantId } : prev)
+                setCalendarStatus("Setup complete! Activate your trial to get your phone number.")
             } else {
                 setCalendarStatus("Setup failed. Please try again.")
             }
@@ -419,26 +411,6 @@ export default function DashboardPage() {
         }
     }
 
-    async function recreateAssistant() {
-        setSaving(true)
-        try {
-            const res = await fetch("/api/vapi/recreate", { method: "POST" })
-            const data = await res.json()
-            if (!res.ok) throw new Error(data.error)
-            setBusiness(prev => prev ? {
-                ...prev,
-                vapi_assistant_id: data.assistantId,
-                phone_number: data.phoneNumber,
-            } : prev)
-            alert(`Done! New number: ${data.phoneNumber}`)
-        } catch (err) {
-            console.error(err)
-            alert("Failed to recreate assistant")
-        } finally {
-            setSaving(false)
-        }
-    }
-
     const saveAvailability = async () => {
         setSaving(true)
         try {
@@ -479,7 +451,6 @@ export default function DashboardPage() {
 
     const isDark = mounted && theme === "dark"
 
-    // FIX 1 applied: use getLocalDateString() instead of new Date().toISOString().split("T")[0]
     const today = getLocalDateString()
     const callsToday = calls.filter(c => c.created_at?.startsWith(today))
     const bookingsToday = callsToday.filter(c => c.appointment_booked)
@@ -506,6 +477,18 @@ export default function DashboardPage() {
     })
     const maxCalls = Math.max(...weekData.map(d => d.calls), 1)
 
+    const PROVINCE_OPTIONS = [
+        { label: "Alberta (403)", value: "403" },
+        { label: "British Columbia (604)", value: "604" },
+        { label: "Manitoba (204)", value: "204" },
+        { label: "New Brunswick (506)", value: "506" },
+        { label: "Newfoundland (709)", value: "709" },
+        { label: "Nova Scotia / PEI (902)", value: "902" },
+        { label: "Ontario (416)", value: "416" },
+        { label: "Quebec (514)", value: "514" },
+        { label: "Saskatchewan (306)", value: "306" },
+    ]
+
     return (
         <div className={`min-h-screen flex ${isDark ? "dark bg-[#0F0F0D]" : "bg-cream"}`}>
 
@@ -514,8 +497,7 @@ export default function DashboardPage() {
             )}
 
             {/* SIDEBAR */}
-            <aside className={`fixed top-0 left-0 h-full w-64 z-50 flex flex-col border-r transition-transform duration-300 md:translate-x-0 md:static md:z-auto ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
-                } ${isDark ? "bg-[#0F0F0D] border-[#1A1A16]" : "bg-white border-border"}`}>
+            <aside className={`fixed top-0 left-0 h-full w-64 z-50 flex flex-col border-r transition-transform duration-300 md:translate-x-0 md:static md:z-auto ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} ${isDark ? "bg-[#0F0F0D] border-[#1A1A16]" : "bg-white border-border"}`}>
 
                 <div className={`px-6 py-5 border-b ${isDark ? "border-[#1A1A16]" : "border-border"}`}>
                     <div className="flex items-center justify-between">
@@ -574,8 +556,7 @@ export default function DashboardPage() {
                     {mounted && (
                         <button
                             onClick={() => setTheme(isDark ? "light" : "dark")}
-                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-sans transition-all duration-150 ${isDark ? "text-[#6A6A62] hover:bg-[#1A1A16] hover:text-[#F0EFE8]" : "text-ink-3 hover:bg-cream hover:text-ink"
-                                }`}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-sans transition-all duration-150 ${isDark ? "text-[#6A6A62] hover:bg-[#1A1A16] hover:text-[#F0EFE8]" : "text-ink-3 hover:bg-cream hover:text-ink"}`}
                         >
                             {isDark ? <Sun size={16} /> : <Moon size={16} />}
                             {isDark ? "Light mode" : "Dark mode"}
@@ -583,8 +564,7 @@ export default function DashboardPage() {
                     )}
                     <button
                         onClick={handleLogout}
-                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-sans transition-all duration-150 ${isDark ? "text-[#6A6A62] hover:bg-[#1A1A16] hover:text-red-400" : "text-ink-3 hover:bg-cream hover:text-red-500"
-                            }`}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-sans transition-all duration-150 ${isDark ? "text-[#6A6A62] hover:bg-[#1A1A16] hover:text-red-400" : "text-ink-3 hover:bg-cream hover:text-red-500"}`}
                     >
                         <LogOut size={16} />
                         Sign out
@@ -595,8 +575,7 @@ export default function DashboardPage() {
             {/* MAIN */}
             <div className="flex-1 flex flex-col min-w-0">
 
-                <header className={`sticky top-0 z-30 flex items-center justify-between px-4 md:px-8 py-4 border-b ${isDark ? "bg-[#0F0F0D] border-[#1A1A16]" : "bg-white border-border"
-                    }`}>
+                <header className={`sticky top-0 z-30 flex items-center justify-between px-4 md:px-8 py-4 border-b ${isDark ? "bg-[#0F0F0D] border-[#1A1A16]" : "bg-white border-border"}`}>
                     <div className="flex items-center gap-4">
                         <button className="md:hidden text-ink-3" onClick={() => setSidebarOpen(true)}>
                             <Menu size={20} />
@@ -683,7 +662,7 @@ export default function DashboardPage() {
                 <main className="flex-1 px-4 md:px-8 py-6 md:py-8 overflow-auto">
 
                     {calendarStatus && (
-                        <div className={`mb-6 px-5 py-3 rounded-lg text-sm font-sans flex items-center justify-between ${calendarStatus.includes("success") || calendarStatus.includes("saved") || calendarStatus.includes("complete") || calendarStatus.includes("blocked")
+                        <div className={`mb-6 px-5 py-3 rounded-lg text-sm font-sans flex items-center justify-between ${calendarStatus.includes("success") || calendarStatus.includes("saved") || calendarStatus.includes("complete") || calendarStatus.includes("blocked") || calendarStatus.includes("activated") || calendarStatus.includes("Trial")
                             ? "bg-green-50 text-green-700 border border-green-200"
                             : "bg-red-50 text-red-700 border border-red-200"
                             }`}>
@@ -697,24 +676,43 @@ export default function DashboardPage() {
                         <div className="space-y-8 animate-[fadeIn_0.3s_ease]">
 
                             {!business?.vapi_assistant_id && (
-                                <div className={`rounded-xl border p-5 flex items-center justify-between gap-4 ${isDark ? "bg-[#1A1A16] border-yellow-800" : "bg-yellow-50 border-yellow-200"
-                                    }`}>
+                                <div className={`rounded-xl border p-5 flex items-center justify-between gap-4 ${isDark ? "bg-[#1A1A16] border-yellow-800" : "bg-yellow-50 border-yellow-200"}`}>
                                     <div className="flex items-center gap-4">
                                         <div className="w-10 h-10 bg-yellow-100 rounded-xl flex items-center justify-center flex-shrink-0">
                                             <AlertTriangle size={18} className="text-yellow-600" />
                                         </div>
                                         <div>
-                                            <p className={`text-sm font-sans font-500 ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>
-                                                Setup incomplete
-                                            </p>
-                                            <p className="text-2xs font-sans text-ink-3">
-                                                Your AI agent wasn&apos;t created yet. Complete setup to start receiving calls.
-                                            </p>
+                                            <p className={`text-sm font-sans font-500 ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>Setup incomplete</p>
+                                            <p className="text-2xs font-sans text-ink-3">Your AI agent wasn&apos;t created yet. Complete setup to start receiving calls.</p>
                                         </div>
                                     </div>
                                     <Button variant="gold" size="sm" onClick={completeSetup} disabled={settingUp}>
                                         {settingUp ? "Setting up..." : "Complete setup →"}
                                     </Button>
+                                </div>
+                            )}
+
+                            {/* Trial activation banner */}
+                            {business?.vapi_assistant_id && !business?.phone_number && !subscription?.isActive && (
+                                <div className={`rounded-xl border p-5 ${isDark ? "bg-[#1A1A16] border-gold/30" : "bg-gold-pale border-gold-light"}`}>
+                                    <div className="flex items-start justify-between gap-4 flex-wrap">
+                                        <div className="flex items-start gap-4">
+                                            <div className="w-10 h-10 bg-gold rounded-xl flex items-center justify-center flex-shrink-0">
+                                                <Phone size={18} className="text-white" />
+                                            </div>
+                                            <div>
+                                                <p className={`text-sm font-sans font-500 mb-0.5 ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>
+                                                    Activate your free trial
+                                                </p>
+                                                <p className="text-xs font-sans text-ink-3 leading-relaxed max-w-sm">
+                                                    Get your dedicated Canadian phone number for $2.50 and start your 13-minute free trial.
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <Button variant="gold" size="sm" onClick={() => setActive("billing")} className="flex-shrink-0">
+                                            Activate for $2.50 →
+                                        </Button>
+                                    </div>
                                 </div>
                             )}
 
@@ -753,14 +751,9 @@ export default function DashboardPage() {
                                         </p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <Button variant="outline" size="sm" onClick={recreateAssistant} disabled={saving}>
-                                        {saving ? "Recreating..." : "Recreate"}
-                                    </Button>
-                                    <Button variant="outline" size="sm" onClick={() => setActive("settings")}>
-                                        Edit agent
-                                    </Button>
-                                </div>
+                                <Button variant="outline" size="sm" onClick={() => setActive("settings")}>
+                                    Edit agent
+                                </Button>
                             </div>
 
                             <div className="grid md:grid-cols-2 gap-6">
@@ -777,8 +770,7 @@ export default function DashboardPage() {
                                         <div className="divide-y divide-border">
                                             {calls.slice(0, 4).map(call => (
                                                 <div key={call.id} className={`px-5 py-3.5 flex items-center gap-3 transition-colors ${isDark ? "hover:bg-[#0F0F0D]" : "hover:bg-cream"}`}>
-                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-sans font-600 flex-shrink-0 ${call.urgent ? "bg-red-100 text-red-600" : "bg-gold-pale text-gold-dark"
-                                                        }`}>
+                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-sans font-600 flex-shrink-0 ${call.urgent ? "bg-red-100 text-red-600" : "bg-gold-pale text-gold-dark"}`}>
                                                         {(call.caller_name || "?").charAt(0).toUpperCase()}
                                                     </div>
                                                     <div className="flex-1 min-w-0">
@@ -814,9 +806,7 @@ export default function DashboardPage() {
                                                         <Calendar size={14} className="text-gold" />
                                                     </div>
                                                     <div className="flex-1 min-w-0">
-                                                        <p className={`text-xs font-sans font-500 truncate ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>
-                                                            {apt.caller_name}
-                                                        </p>
+                                                        <p className={`text-xs font-sans font-500 truncate ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>{apt.caller_name}</p>
                                                         <p className="text-2xs font-sans text-ink-3">{apt.type} · {formatDate(apt.date)} at {apt.time}</p>
                                                     </div>
                                                     <StatusBadge status={apt.status} />
@@ -833,19 +823,11 @@ export default function DashboardPage() {
                     {active === "calls" && (
                         <div className="space-y-6 animate-[fadeIn_0.3s_ease]">
                             <div className="flex items-center justify-between flex-wrap gap-3">
-                                <p className="text-sm font-sans text-ink-3">
-                                    {calls.length} total call{calls.length !== 1 ? "s" : ""}
-                                </p>
+                                <p className="text-sm font-sans text-ink-3">{calls.length} total call{calls.length !== 1 ? "s" : ""}</p>
                                 <div className="flex gap-2 flex-wrap">
                                     {["All", "Booked", "Urgent", "Missed"].map(f => (
-                                        <button
-                                            key={f}
-                                            onClick={() => setCallFilter(f)}
-                                            className={`px-3 py-1.5 text-xs font-sans rounded-lg border transition-colors ${callFilter === f
-                                                ? "bg-gold text-white border-gold"
-                                                : "border-border text-ink-3 hover:border-gold hover:text-gold"
-                                                }`}
-                                        >
+                                        <button key={f} onClick={() => setCallFilter(f)}
+                                            className={`px-3 py-1.5 text-xs font-sans rounded-lg border transition-colors ${callFilter === f ? "bg-gold text-white border-gold" : "border-border text-ink-3 hover:border-gold hover:text-gold"}`}>
                                             {f}
                                         </button>
                                     ))}
@@ -856,13 +838,8 @@ export default function DashboardPage() {
                                     <EmptyState isDark={isDark} icon={<PhoneOff size={20} />} title="No calls found" sub="Calls will appear here after your AI answers them." />
                                 ) : (
                                     filteredCalls.map((call, i) => (
-                                        <div
-                                            key={call.id}
-                                            className={`px-6 py-4 flex items-center gap-4 transition-colors ${isDark ? "hover:bg-[#0F0F0D]" : "hover:bg-cream"} ${i < filteredCalls.length - 1 ? `border-b ${isDark ? "border-[#2A2A26]" : "border-border"}` : ""
-                                                }`}
-                                        >
-                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-sans font-600 flex-shrink-0 ${call.urgent ? "bg-red-100 text-red-600" : "bg-gold-pale text-gold-dark"
-                                                }`}>
+                                        <div key={call.id} className={`px-6 py-4 flex items-center gap-4 transition-colors ${isDark ? "hover:bg-[#0F0F0D]" : "hover:bg-cream"} ${i < filteredCalls.length - 1 ? `border-b ${isDark ? "border-[#2A2A26]" : "border-border"}` : ""}`}>
+                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-sans font-600 flex-shrink-0 ${call.urgent ? "bg-red-100 text-red-600" : "bg-gold-pale text-gold-dark"}`}>
                                                 {(call.caller_name || "?").charAt(0).toUpperCase()}
                                             </div>
                                             <div className="flex-1 min-w-0">
@@ -878,9 +855,7 @@ export default function DashboardPage() {
                                                 <Clock size={11} /> {formatDuration(call.duration_seconds)}
                                             </div>
                                             <StatusBadge status={call.appointment_booked ? "booked" : call.urgent ? "urgent" : call.status} />
-                                            <span className="text-2xs font-sans text-ink-3 hidden md:block whitespace-nowrap flex-shrink-0">
-                                                {timeAgo(call.created_at)}
-                                            </span>
+                                            <span className="text-2xs font-sans text-ink-3 hidden md:block whitespace-nowrap flex-shrink-0">{timeAgo(call.created_at)}</span>
                                         </div>
                                     ))
                                 )}
@@ -892,20 +867,14 @@ export default function DashboardPage() {
                     {active === "appointments" && (
                         <div className="space-y-6 animate-[fadeIn_0.3s_ease]">
                             <div className="flex items-center justify-between">
-                                <p className="text-sm font-sans text-ink-3">
-                                    {appointments.length} upcoming appointment{appointments.length !== 1 ? "s" : ""}
-                                </p>
+                                <p className="text-sm font-sans text-ink-3">{appointments.length} upcoming appointment{appointments.length !== 1 ? "s" : ""}</p>
                             </div>
                             <div className={`rounded-xl border overflow-hidden ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
                                 {appointments.length === 0 ? (
                                     <EmptyState isDark={isDark} icon={<Calendar size={20} />} title="No appointments yet" sub="When your AI books appointments they'll appear here with all the details." />
                                 ) : (
                                     appointments.map((apt, i) => (
-                                        <div
-                                            key={apt.id}
-                                            className={`px-6 py-4 flex items-center gap-4 transition-colors ${isDark ? "hover:bg-[#0F0F0D]" : "hover:bg-cream"} ${i < appointments.length - 1 ? `border-b ${isDark ? "border-[#2A2A26]" : "border-border"}` : ""
-                                                }`}
-                                        >
+                                        <div key={apt.id} className={`px-6 py-4 flex items-center gap-4 transition-colors ${isDark ? "hover:bg-[#0F0F0D]" : "hover:bg-cream"} ${i < appointments.length - 1 ? `border-b ${isDark ? "border-[#2A2A26]" : "border-border"}` : ""}`}>
                                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isDark ? "bg-[#2A2A26]" : "bg-gold-pale"}`}>
                                                 <Calendar size={16} className="text-gold" />
                                             </div>
@@ -941,13 +910,8 @@ export default function DashboardPage() {
                                     <div className="flex items-end gap-3 h-32">
                                         {weekData.map(d => (
                                             <div key={d.day} className="flex-1 flex flex-col items-center gap-2">
-                                                <div
-                                                    className="w-full bg-gold rounded-sm transition-all duration-500"
-                                                    style={{
-                                                        height: d.calls > 0 ? `${(d.calls / maxCalls) * 100}%` : "4px",
-                                                        opacity: d.calls > 0 ? 0.7 + (d.calls / maxCalls) * 0.3 : 0.2
-                                                    }}
-                                                />
+                                                <div className="w-full bg-gold rounded-sm transition-all duration-500"
+                                                    style={{ height: d.calls > 0 ? `${(d.calls / maxCalls) * 100}%` : "4px", opacity: d.calls > 0 ? 0.7 + (d.calls / maxCalls) * 0.3 : 0.2 }} />
                                                 <span className="text-2xs font-sans text-ink-3">{d.day}</span>
                                             </div>
                                         ))}
@@ -1072,12 +1036,9 @@ export default function DashboardPage() {
                                                     </Button>
                                                 </a>
                                             ) : (
-                                                <Button
-                                                    variant={business?.calendar_type === "builtin" ? "gold" : "secondary"}
-                                                    size="sm"
+                                                <Button variant={business?.calendar_type === "builtin" ? "gold" : "secondary"} size="sm"
                                                     onClick={business?.calendar_type !== "builtin" ? switchToBuiltin : undefined}
-                                                    disabled={saving || business?.calendar_type === "builtin"}
-                                                >
+                                                    disabled={saving || business?.calendar_type === "builtin"}>
                                                     {business?.calendar_type === "builtin" ? "Active" : "Use this"}
                                                 </Button>
                                             )}
@@ -1097,24 +1058,19 @@ export default function DashboardPage() {
                                 <div className="space-y-4">
                                     <div>
                                         <label className="block text-2xs font-sans font-500 text-ink-3 mb-1.5 tracking-[0.1em] uppercase">Agent name</label>
-                                        <input type="text" value={settingsForm.aiName}
-                                            onChange={e => setSettingsForm(p => ({ ...p, aiName: e.target.value }))}
-                                            placeholder="Lisa"
+                                        <input type="text" value={settingsForm.aiName} onChange={e => setSettingsForm(p => ({ ...p, aiName: e.target.value }))} placeholder="Lisa"
                                             className={`w-full px-4 py-2.5 text-sm font-sans border rounded-lg focus:outline-none focus:border-gold transition-colors ${isDark ? "bg-[#0F0F0D] border-[#2A2A26] text-[#F0EFE8] placeholder:text-[#444440]" : "bg-white border-border text-ink placeholder:text-ink-3"}`} />
                                         <p className="text-2xs text-ink-3 font-sans mt-1">This is the name callers will hear</p>
                                     </div>
                                     <div>
                                         <label className="block text-2xs font-sans font-500 text-ink-3 mb-1.5 tracking-[0.1em] uppercase">Custom greeting</label>
-                                        <input type="text" value={settingsForm.aiGreeting}
-                                            onChange={e => setSettingsForm(p => ({ ...p, aiGreeting: e.target.value }))}
+                                        <input type="text" value={settingsForm.aiGreeting} onChange={e => setSettingsForm(p => ({ ...p, aiGreeting: e.target.value }))}
                                             placeholder={`Thank you for calling ${business?.name || "us"}, this is ${business?.ai_name || "Lisa"}, how can I help?`}
                                             className={`w-full px-4 py-2.5 text-sm font-sans border rounded-lg focus:outline-none focus:border-gold transition-colors ${isDark ? "bg-[#0F0F0D] border-[#2A2A26] text-[#F0EFE8] placeholder:text-[#444440]" : "bg-white border-border text-ink placeholder:text-ink-3"}`} />
                                     </div>
                                     <div>
                                         <label className="block text-2xs font-sans font-500 text-ink-3 mb-1.5 tracking-[0.1em] uppercase">Notification phone</label>
-                                        <input type="tel" value={settingsForm.notificationPhone}
-                                            onChange={e => setSettingsForm(p => ({ ...p, notificationPhone: e.target.value }))}
-                                            placeholder="+1 431 555 0123"
+                                        <input type="tel" value={settingsForm.notificationPhone} onChange={e => setSettingsForm(p => ({ ...p, notificationPhone: e.target.value }))} placeholder="+1 431 555 0123"
                                             className={`w-full px-4 py-2.5 text-sm font-sans border rounded-lg focus:outline-none focus:border-gold transition-colors ${isDark ? "bg-[#0F0F0D] border-[#2A2A26] text-[#F0EFE8] placeholder:text-[#444440]" : "bg-white border-border text-ink placeholder:text-ink-3"}`} />
                                         <p className="text-2xs text-ink-3 font-sans mt-1">Your personal cell — we text you a summary after each call and when you near your minute limit</p>
                                     </div>
@@ -1130,15 +1086,12 @@ export default function DashboardPage() {
                                 <div className="space-y-4">
                                     <div>
                                         <label className="block text-2xs font-sans font-500 text-ink-3 mb-1.5 tracking-[0.1em] uppercase">Business name</label>
-                                        <input type="text" value={settingsForm.businessName}
-                                            onChange={e => setSettingsForm(p => ({ ...p, businessName: e.target.value }))}
-                                            placeholder="Your business name"
+                                        <input type="text" value={settingsForm.businessName} onChange={e => setSettingsForm(p => ({ ...p, businessName: e.target.value }))} placeholder="Your business name"
                                             className={`w-full px-4 py-2.5 text-sm font-sans border rounded-lg focus:outline-none focus:border-gold transition-colors ${isDark ? "bg-[#0F0F0D] border-[#2A2A26] text-[#F0EFE8] placeholder:text-[#444440]" : "bg-white border-border text-ink placeholder:text-ink-3"}`} />
                                     </div>
                                     <div>
                                         <label className="block text-2xs font-sans font-500 text-ink-3 mb-1.5 tracking-[0.1em] uppercase">Business type</label>
-                                        <select value={settingsForm.businessType}
-                                            onChange={e => setSettingsForm(p => ({ ...p, businessType: e.target.value }))}
+                                        <select value={settingsForm.businessType} onChange={e => setSettingsForm(p => ({ ...p, businessType: e.target.value }))}
                                             className={`w-full px-4 py-2.5 text-sm font-sans border rounded-lg focus:outline-none focus:border-gold transition-colors ${isDark ? "bg-[#0F0F0D] border-[#2A2A26] text-[#F0EFE8]" : "bg-white border-border text-ink"}`}>
                                             <option value="">Select business type</option>
                                             {["Medical / Dental clinic", "Hair salon & spa", "Contractor / Builder", "Moving company", "Restaurant", "Hotel / B&B", "Real estate", "Law firm", "Repair shop", "Vet clinic", "Grocery store", "Clothing & fashion", "Accountant / Finance", "Church & place of worship", "Retail store", "Other"].map(t => (
@@ -1151,8 +1104,7 @@ export default function DashboardPage() {
                                             About your business
                                             <span className="ml-2 normal-case tracking-normal font-400 text-2xs">Tell the AI what makes you unique</span>
                                         </label>
-                                        <textarea rows={4} value={settingsForm.about}
-                                            onChange={e => setSettingsForm(p => ({ ...p, about: e.target.value }))}
+                                        <textarea rows={4} value={settingsForm.about} onChange={e => setSettingsForm(p => ({ ...p, about: e.target.value }))}
                                             placeholder="e.g. We are a family-owned moving company specializing in local residential moves..."
                                             className={`w-full px-4 py-3 text-sm font-sans border rounded-lg focus:outline-none focus:border-gold transition-colors resize-none leading-relaxed ${isDark ? "bg-[#0F0F0D] border-[#2A2A26] text-[#F0EFE8] placeholder:text-[#444440]" : "bg-white border-border text-ink placeholder:text-ink-3"}`} />
                                         <p className="text-2xs text-ink-3 font-sans mt-1">This gets added directly to your AI&apos;s knowledge</p>
@@ -1169,15 +1121,13 @@ export default function DashboardPage() {
                                 <div className="flex items-end gap-3">
                                     <div className="flex-1">
                                         <label className="block text-2xs font-sans font-500 text-ink-3 mb-1.5 tracking-[0.1em] uppercase">Opens at</label>
-                                        <input type="time" value={settingsForm.hoursStart}
-                                            onChange={e => setSettingsForm(p => ({ ...p, hoursStart: e.target.value }))}
+                                        <input type="time" value={settingsForm.hoursStart} onChange={e => setSettingsForm(p => ({ ...p, hoursStart: e.target.value }))}
                                             className={`w-full px-4 py-2.5 text-sm font-sans border rounded-lg focus:outline-none focus:border-gold transition-colors ${isDark ? "bg-[#0F0F0D] border-[#2A2A26] text-[#F0EFE8]" : "bg-white border-border text-ink"}`} />
                                     </div>
                                     <div className="text-ink-3 pb-3 font-sans">→</div>
                                     <div className="flex-1">
                                         <label className="block text-2xs font-sans font-500 text-ink-3 mb-1.5 tracking-[0.1em] uppercase">Closes at</label>
-                                        <input type="time" value={settingsForm.hoursEnd}
-                                            onChange={e => setSettingsForm(p => ({ ...p, hoursEnd: e.target.value }))}
+                                        <input type="time" value={settingsForm.hoursEnd} onChange={e => setSettingsForm(p => ({ ...p, hoursEnd: e.target.value }))}
                                             className={`w-full px-4 py-2.5 text-sm font-sans border rounded-lg focus:outline-none focus:border-gold transition-colors ${isDark ? "bg-[#0F0F0D] border-[#2A2A26] text-[#F0EFE8]" : "bg-white border-border text-ink"}`} />
                                     </div>
                                 </div>
@@ -1199,20 +1149,11 @@ export default function DashboardPage() {
                                         <p className="text-xs font-sans text-ink-3 mt-0.5">
                                             {subscription?.isActive
                                                 ? `${subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1)} · renews ${subscription.currentPeriodEnd ? new Date(subscription.currentPeriodEnd).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" }) : "—"}`
-                                                : subscription?.isExpired
-                                                    ? "Trial expired — upgrade to continue"
-                                                    : "Free trial"}
+                                                : subscription?.isExpired ? "Trial expired — upgrade to continue" : "Free trial"}
                                         </p>
                                     </div>
-                                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-sans font-500 border ${subscription?.isActive
-                                        ? "bg-green-50 text-green-700 border-green-200"
-                                        : subscription?.isExpired
-                                            ? "bg-red-50 text-red-700 border-red-200"
-                                            : "bg-gold-pale text-gold-dark border-gold-light"
-                                        }`}>
-                                        {subscription?.isActive
-                                            ? subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1)
-                                            : subscription?.isExpired ? "Expired" : "Trial"}
+                                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-sans font-500 border ${subscription?.isActive ? "bg-green-50 text-green-700 border-green-200" : subscription?.isExpired ? "bg-red-50 text-red-700 border-red-200" : "bg-gold-pale text-gold-dark border-gold-light"}`}>
+                                        {subscription?.isActive ? subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1) : subscription?.isExpired ? "Expired" : "Trial"}
                                     </span>
                                 </div>
 
@@ -1233,13 +1174,61 @@ export default function DashboardPage() {
                                         <AlertTriangle size={10} /> You&apos;re running low on minutes
                                     </p>
                                 )}
-
                                 {subscription?.isActive && (
                                     <Button variant="outline" size="sm" className="mt-5" onClick={handleManageBilling} disabled={billingLoading}>
                                         {billingLoading ? "Loading..." : "Manage subscription →"}
                                     </Button>
                                 )}
                             </div>
+
+                            {/* Trial activation card */}
+                            {!business?.phone_number && !subscription?.isActive && (
+                                <div className={`rounded-xl border p-6 ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
+                                    <h3 className={`font-serif text-lg mb-1 ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>Activate your free trial</h3>
+                                    <p className="text-xs font-sans text-ink-3 mb-6">Get your dedicated Canadian phone number and start your 13-minute free trial.</p>
+
+                                    <div className="mb-5">
+                                        <label className="block text-2xs font-sans font-500 text-ink-3 mb-2 tracking-[0.1em] uppercase">
+                                            Your province <span className="text-red-400">*</span>
+                                        </label>
+                                        <select value={upgradeProvince} onChange={e => setUpgradeProvince(e.target.value)}
+                                            className={`w-full px-4 py-2.5 text-sm font-sans border rounded-lg focus:outline-none focus:border-gold transition-colors ${isDark ? "bg-[#0F0F0D] border-[#2A2A26] text-[#F0EFE8]" : "bg-white border-border text-ink"}`}>
+                                            <option value="">Select your province</option>
+                                            {PROVINCE_OPTIONS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                                        </select>
+                                        {upgradeProvince && (
+                                            <p className="text-2xs text-ink-3 font-sans mt-1.5">
+                                                You&apos;ll get a local <strong className="text-gold">{upgradeProvince}</strong> area code number.
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    <div className={`rounded-lg p-4 mb-5 text-xs font-sans leading-relaxed ${isDark ? "bg-[#0F0F0D] text-[#6A6A62]" : "bg-cream text-ink-3"}`}>
+                                        By activating, you agree to our trial terms: the $2.50 activation fee covers your dedicated Canadian phone number. Your 13 free minutes begin immediately after activation.
+                                    </div>
+
+                                    <Button variant="gold" size="sm" className="w-full" disabled={billingLoading || !upgradeProvince}
+                                        onClick={async () => {
+                                            if (!upgradeProvince) { setCalendarStatus("Please select your province first."); return }
+                                            setBillingLoading(true)
+                                            try {
+                                                const res = await fetch("/api/stripe/activate", {
+                                                    method: "POST",
+                                                    headers: { "Content-Type": "application/json" },
+                                                    body: JSON.stringify({ areaCode: upgradeProvince }),
+                                                })
+                                                const data = await res.json()
+                                                if (data.url) window.location.href = data.url
+                                                else setCalendarStatus("Failed to start activation. Try again.")
+                                            } catch {
+                                                setCalendarStatus("Failed to start activation. Try again.")
+                                            }
+                                            setBillingLoading(false)
+                                        }}>
+                                        {billingLoading ? "Loading..." : "Activate for $2.50 →"}
+                                    </Button>
+                                </div>
+                            )}
 
                             {(!subscription?.isActive || subscription?.plan === "growth") && (
                                 <div className={`rounded-xl border p-6 ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
@@ -1250,33 +1239,24 @@ export default function DashboardPage() {
                                         {subscription?.isExpired ? "Your trial has ended. Upgrade to keep your AI receptionist running." : "Unlock more minutes and features."}
                                     </p>
 
-                                    {/* Province picker */}
-                                    <div className="mb-6">
-                                        <label className="block text-2xs font-sans font-500 text-ink-3 mb-2 tracking-[0.1em] uppercase">
-                                            Your province <span className="text-red-400">*</span>
-                                        </label>
-                                        <select
-                                            value={upgradeProvince}
-                                            onChange={e => setUpgradeProvince(e.target.value)}
-                                            className={`w-full px-4 py-2.5 text-sm font-sans border rounded-lg focus:outline-none focus:border-gold transition-colors ${isDark ? "bg-[#0F0F0D] border-[#2A2A26] text-[#F0EFE8]" : "bg-white border-border text-ink"}`}
-                                        >
-                                            <option value="">Select province for your phone number</option>
-                                            <option value="403">Alberta (403)</option>
-                                            <option value="604">British Columbia (604)</option>
-                                            <option value="204">Manitoba (204)</option>
-                                            <option value="506">New Brunswick (506)</option>
-                                            <option value="709">Newfoundland (709)</option>
-                                            <option value="902">Nova Scotia / PEI (902)</option>
-                                            <option value="416">Ontario (416)</option>
-                                            <option value="514">Quebec (514)</option>
-                                            <option value="306">Saskatchewan (306)</option>
-                                        </select>
-                                        {upgradeProvince && (
-                                            <p className="text-2xs text-ink-3 font-sans mt-1.5">
-                                                You&apos;ll get a local <strong className="text-gold">{upgradeProvince}</strong> area code number after upgrading.
-                                            </p>
-                                        )}
-                                    </div>
+                                    {/* Province picker for upgrade (only if already has a number) */}
+                                    {business?.phone_number && (
+                                        <div className="mb-6">
+                                            <label className="block text-2xs font-sans font-500 text-ink-3 mb-2 tracking-[0.1em] uppercase">
+                                                Your province <span className="text-red-400">*</span>
+                                            </label>
+                                            <select value={upgradeProvince} onChange={e => setUpgradeProvince(e.target.value)}
+                                                className={`w-full px-4 py-2.5 text-sm font-sans border rounded-lg focus:outline-none focus:border-gold transition-colors ${isDark ? "bg-[#0F0F0D] border-[#2A2A26] text-[#F0EFE8]" : "bg-white border-border text-ink"}`}>
+                                                <option value="">Select province for your phone number</option>
+                                                {PROVINCE_OPTIONS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                                            </select>
+                                            {upgradeProvince && (
+                                                <p className="text-2xs text-ink-3 font-sans mt-1.5">
+                                                    You&apos;ll get a local <strong className="text-gold">{upgradeProvince}</strong> area code number after upgrading.
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
 
                                     <div className="grid md:grid-cols-2 gap-4">
                                         {[
@@ -1310,17 +1290,11 @@ export default function DashboardPage() {
                                                     ))}
                                                 </ul>
                                                 {plan.current ? (
-                                                    <Button variant="outline" size="sm" className="w-full" disabled>
-                                                        Current plan
-                                                    </Button>
+                                                    <Button variant="outline" size="sm" className="w-full" disabled>Current plan</Button>
                                                 ) : (
-                                                    <Button
-                                                        variant={plan.featured ? "gold" : "secondary"}
-                                                        size="sm"
-                                                        className="w-full"
+                                                    <Button variant={plan.featured ? "gold" : "secondary"} size="sm" className="w-full"
                                                         onClick={() => handleUpgrade(plan.id, upgradeProvince)}
-                                                        disabled={billingLoading}
-                                                    >
+                                                        disabled={billingLoading}>
                                                         {billingLoading ? "Loading..." : `Upgrade to ${plan.name} →`}
                                                     </Button>
                                                 )}
