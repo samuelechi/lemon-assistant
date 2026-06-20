@@ -15,8 +15,18 @@
   --font-serif: "Cormorant Garamond", Georgia, serif;
   --font-sans: "Montserrat", sans-serif;
 
+  /* Layered, gold-tinted elevation system */
+  --shadow-soft: 0 1px 2px rgba(15, 15, 13, 0.04), 0 2px 8px rgba(15, 15, 13, 0.04);
+  --shadow-card: 0 1px 2px rgba(15, 15, 13, 0.05), 0 8px 24px -8px rgba(15, 15, 13, 0.10);
+  --shadow-lift: 0 4px 12px rgba(15, 15, 13, 0.06), 0 18px 40px -12px rgba(15, 15, 13, 0.18);
+  --shadow-gold: 0 6px 16px -4px rgba(196, 154, 0, 0.35), 0 2px 6px rgba(196, 154, 0, 0.18);
+  --shadow-gold-lg: 0 10px 30px -6px rgba(196, 154, 0, 0.45), 0 4px 10px rgba(196, 154, 0, 0.22);
+
   --animate-marquee: marquee 22s linear infinite;
   --animate-fadeIn: fadeIn 0.3s ease;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-shimmer: shimmer 2.6s ease-in-out infinite;
+  --animate-glow: glow 4s ease-in-out infinite;
 
   @keyframes marquee {
     0% {
@@ -39,6 +49,50 @@
       transform: translateY(0);
     }
   }
+
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0);
+    }
+
+    50% {
+      transform: translateY(-12px);
+    }
+  }
+
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-120%) skewX(-12deg);
+    }
+
+    60%, 100% {
+      transform: translateX(220%) skewX(-12deg);
+    }
+  }
+
+  @keyframes glow {
+    0%, 100% {
+      opacity: 0.55;
+      transform: scale(1);
+    }
+
+    50% {
+      opacity: 0.9;
+      transform: scale(1.08);
+    }
+  }
+
+  @keyframes revealUp {
+    from {
+      opacity: 0;
+      transform: translateY(26px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }
 
 @layer base {
@@ -52,14 +106,40 @@
 
   body {
     font-family: var(--font-sans);
-    background: #FAFAF5;
     color: #0F0F0D;
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    /* Warm ambient depth — layered radial washes over the cream base */
+    background-color: #FAFAF5;
+    background-image:
+      radial-gradient(1200px 700px at 85% -5%, rgba(196, 154, 0, 0.07), transparent 60%),
+      radial-gradient(900px 600px at -10% 10%, rgba(196, 154, 0, 0.05), transparent 55%);
+    background-attachment: fixed;
   }
 
   .dark body {
-    background: #0F0F0D;
     color: #F0EFE8;
+    background-color: #0F0F0D;
+    background-image:
+      radial-gradient(1100px 700px at 90% -10%, rgba(196, 154, 0, 0.10), transparent 60%),
+      radial-gradient(800px 600px at -5% 5%, rgba(196, 154, 0, 0.06), transparent 55%);
+  }
+
+  /* Fine film grain for richness — sits above paint, never blocks interaction */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0.035;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .dark body::after {
+    mix-blend-mode: screen;
+    opacity: 0.05;
   }
 
   h1,
@@ -69,8 +149,150 @@
   h5 {
     font-family: var(--font-serif);
     font-weight: 500;
+    letter-spacing: -0.012em;
   }
 
+  h1 {
+    letter-spacing: -0.02em;
+  }
+
+  ::selection {
+    background: rgba(196, 154, 0, 0.22);
+    color: #0F0F0D;
+  }
+
+  .dark ::selection {
+    color: #F0EFE8;
+  }
+
+  /* Refined focus — soft gold ring for keyboard users */
+  :focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(196, 154, 0, 0.28);
+    border-radius: 6px;
+  }
+
+  /* Inputs get a gentle gold glow on focus, on top of the existing border swap */
+  input:focus,
+  textarea:focus,
+  select:focus {
+    box-shadow: 0 0 0 4px rgba(196, 154, 0, 0.12);
+  }
+
+  /* Tinted, slim scrollbar */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(196, 154, 0, 0.35) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(196, 154, 0, 0.30);
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(196, 154, 0, 0.55);
+    background-clip: content-box;
+  }
+}
+
+/* ─────────────────────────────────────────────
+   Polish utilities — opt-in, applied surgically
+   ───────────────────────────────────────────── */
+
+/* Gradient-gold display text for headline accents */
+.text-gradient-gold {
+  background: linear-gradient(118deg, #E6BE2E 0%, #C49A00 52%, #8A6D00 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* Hover lift for cards / tiles */
+.lift {
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.3s ease;
+  will-change: transform;
+}
+
+.lift:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-lift);
+}
+
+/* Soft ambient gold glow blob (decorative, non-interactive) */
+.glow-gold {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(70px);
+  background: radial-gradient(circle, rgba(196, 154, 0, 0.45), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.float {
+  animation: var(--animate-float);
+}
+
+/* Shine sweep used by primary buttons */
+.shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.shine::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  transform: translateX(-160%) skewX(-14deg);
+  pointer-events: none;
+}
+
+.shine:hover::after {
+  animation: shimmer 0.9s ease;
+}
+
+/* Edge fade for marquees / overflow rows */
+.fade-x {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+/* Scroll-reveal — progressive enhancement only.
+   Content stays fully visible unless the browser supports
+   scroll-driven animations AND the user allows motion. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal {
+      animation: revealUp linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 22%;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .float,
+  .shine::after {
+    animation: none !important;
+  }
+}
+
+@layer base {
   /* DARK MODE OVERRIDES */
   .dark .bg-white {
     background: #1A1A16 !important;

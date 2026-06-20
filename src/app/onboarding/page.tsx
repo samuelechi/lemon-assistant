@@ -167,9 +167,9 @@ export default function OnboardingPage() {
                     {step === 1 && (
                         <div>
                             <p className="text-2xs font-sans font-500 tracking-[0.14em] uppercase text-gold mb-3">Step 1 of 4</p>
-                            <h1 className="font-serif text-4xl md:text-5xl text-ink mb-2 leading-[1.1]">Tell us about<br /><em className="text-gold not-italic">your business.</em></h1>
+                            <h1 className="font-serif text-4xl md:text-5xl text-ink mb-2 leading-[1.1]">Tell us about<br /><em className="text-gradient-gold not-italic">your business.</em></h1>
                             <p className="text-sm font-sans text-ink-3 mb-8 leading-relaxed">This helps us personalize your AI receptionist to sound exactly like your business.</p>
-                            <div className="bg-white border border-border rounded-xl p-6 md:p-8 space-y-6">
+                            <div className="bg-white border border-border rounded-xl p-6 md:p-8 space-y-6 shadow-[var(--shadow-card)]">
                                 <div>
                                     <label className="block text-2xs font-sans font-500 text-ink mb-2 tracking-[0.12em] uppercase">Business name</label>
                                     <input type="text" value={form.name} onChange={e => { update("name", e.target.value); setAttempted(false) }} placeholder="e.g. Smith Moving Co."
@@ -201,9 +201,9 @@ export default function OnboardingPage() {
                     {step === 2 && (
                         <div>
                             <p className="text-2xs font-sans font-500 tracking-[0.14em] uppercase text-gold mb-3">Step 2 of 4</p>
-                            <h1 className="font-serif text-4xl md:text-5xl text-ink mb-2 leading-[1.1]">Set your<br /><em className="text-gold not-italic">schedule.</em></h1>
+                            <h1 className="font-serif text-4xl md:text-5xl text-ink mb-2 leading-[1.1]">Set your<br /><em className="text-gradient-gold not-italic">schedule.</em></h1>
                             <p className="text-sm font-sans text-ink-3 mb-8 leading-relaxed">Your AI will only book appointments during these hours and days.</p>
-                            <div className="bg-white border border-border rounded-xl p-6 md:p-8 space-y-6">
+                            <div className="bg-white border border-border rounded-xl p-6 md:p-8 space-y-6 shadow-[var(--shadow-card)]">
                                 <div>
                                     <label className="block text-2xs font-sans font-500 text-ink mb-3 tracking-[0.12em] uppercase">Working hours</label>
                                     <div className="flex items-end gap-3">
@@ -260,7 +260,7 @@ export default function OnboardingPage() {
                     {step === 3 && (
                         <div>
                             <p className="text-2xs font-sans font-500 tracking-[0.14em] uppercase text-gold mb-3">Step 3 of 4</p>
-                            <h1 className="font-serif text-4xl md:text-5xl text-ink mb-2 leading-[1.1]">Connect your<br /><em className="text-gold not-italic">calendar.</em></h1>
+                            <h1 className="font-serif text-4xl md:text-5xl text-ink mb-2 leading-[1.1]">Connect your<br /><em className="text-gradient-gold not-italic">calendar.</em></h1>
                             <p className="text-sm font-sans text-ink-3 mb-8 leading-relaxed">Your AI checks real availability and books directly into your calendar. No double bookings, ever.</p>
                             <div className="bg-white border border-border rounded-xl p-6 md:p-8">
                                 <div className="space-y-3">
@@ -288,9 +288,9 @@ export default function OnboardingPage() {
                     {step === 4 && (
                         <div>
                             <p className="text-2xs font-sans font-500 tracking-[0.14em] uppercase text-gold mb-3">Step 4 of 4</p>
-                            <h1 className="font-serif text-4xl md:text-5xl text-ink mb-2 leading-[1.1]">You&apos;re almost<br /><em className="text-gold not-italic">live.</em></h1>
+                            <h1 className="font-serif text-4xl md:text-5xl text-ink mb-2 leading-[1.1]">You&apos;re almost<br /><em className="text-gradient-gold not-italic">live.</em></h1>
                             <p className="text-sm font-sans text-ink-3 mb-8 leading-relaxed">Your AI receptionist is ready. Start your free trial — no credit card needed.</p>
-                            <div className="bg-white border border-border rounded-xl p-6 md:p-8 space-y-6">
+                            <div className="bg-white border border-border rounded-xl p-6 md:p-8 space-y-6 shadow-[var(--shadow-card)]">
 
                                 <div className="bg-ink rounded-xl p-5">
                                     <p className="text-2xs font-sans text-ink-3 uppercase tracking-widest mb-4">What&apos;s included in your trial</p>

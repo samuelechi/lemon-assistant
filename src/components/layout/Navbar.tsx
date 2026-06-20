@@ -16,7 +16,7 @@ export function Navbar() {
   const [open, setOpen] = useState(false)
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-border">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-border shadow-[0_1px_0_rgba(255,255,255,0.6)_inset,0_4px_20px_-12px_rgba(15,15,13,0.25)]">
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link href="/">
           <Logo variant="white" size="sm" />

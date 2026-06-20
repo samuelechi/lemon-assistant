@@ -129,7 +129,7 @@ function StatCard({ icon, label, value, sub, accent, isDark }: {
     icon: React.ReactNode; label: string; value: string; sub?: string; accent?: boolean; isDark: boolean
 }) {
     return (
-        <div className={`rounded-xl border p-5 transition-all duration-200 hover:shadow-sm ${accent ? "bg-gold border-gold-light" : isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
+        <div className={`lift rounded-xl border p-5 ${accent ? "bg-gradient-to-br from-[#E0B400] via-gold to-[#A07E00] border-gold-light shadow-[var(--shadow-gold)]" : isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
             <div className={`w-9 h-9 rounded-lg flex items-center justify-center mb-4 ${accent ? "bg-white/20 text-white" : isDark ? "bg-[#2A2A26] text-gold" : "bg-gold-pale text-gold"}`}>
                 {icon}
             </div>

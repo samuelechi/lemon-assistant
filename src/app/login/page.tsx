@@ -97,7 +97,7 @@ export default function LoginPage() {
                 <div className="relative z-10">
                     <Link href="/"><Logo variant="dark" size="sm" className="mb-16" /></Link>
                     <h1 className="font-serif text-3xl md:text-5xl text-white leading-[1.1] mb-5">
-                        Never miss a call.<br /><em className="text-gold not-italic">Never lose a client.</em>
+                        Never miss a call.<br /><em className="text-gradient-gold not-italic">Never lose a client.</em>
                     </h1>
                     <p className="text-sm font-sans text-ink-3 leading-relaxed max-w-sm">
                         Your AI receptionist answers every missed call, books appointments, and sends confirmations — automatically.
@@ -130,7 +130,7 @@ export default function LoginPage() {
                     </div>
                     <h2 className="font-serif text-3xl text-ink mb-1">Welcome back</h2>
                     <p className="text-sm font-sans text-ink-3 mb-8">Sign in to your account</p>
-                    <div className="bg-white border border-border rounded-xl p-8">
+                    <div className="bg-white border border-border rounded-xl p-8 shadow-[var(--shadow-card)]">
 
                         {/* Google Sign In */}
                         <button

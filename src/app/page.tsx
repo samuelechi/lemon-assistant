@@ -180,8 +180,10 @@ export default function HomePage() {
       <Navbar />
 
       {/* ── HERO ── */}
-      <section className="pt-32 pb-24 px-6 bg-white border-b border-border overflow-hidden">
-        <div className="max-w-6xl mx-auto">
+      <section className="relative pt-32 pb-24 px-6 bg-white border-b border-border overflow-hidden">
+        <span className="glow-gold w-[34rem] h-[34rem] -top-40 -right-40 opacity-60 animate-[glow_5s_ease-in-out_infinite]" aria-hidden />
+        <span className="glow-gold w-80 h-80 bottom-0 -left-24 opacity-40" aria-hidden />
+        <div className="relative z-10 max-w-6xl mx-auto">
           <div className="flex justify-center md:justify-start mb-10">
             <div className="inline-flex items-center gap-2.5 bg-gold-pale border border-gold-light rounded-full px-5 py-2">
               <span className="w-1.5 h-1.5 bg-gold rounded-full animate-pulse" />
@@ -195,7 +197,7 @@ export default function HomePage() {
             <div>
               <h1 className="font-serif text-6xl leading-[1.05] text-ink mb-3">
                 Every missed call<br />is a customer<br />
-                <em className="text-gold not-italic">someone else booked.</em>
+                <em className="text-gradient-gold not-italic">someone else booked.</em>
               </h1>
               <p className="text-sm font-sans text-ink-3 leading-relaxed mb-8 max-w-md mt-6">
                 LemonAssistant answers your phone 24/7, books appointments live, and sends confirmations — so you can focus on the work, not the ring. Available in Canada, US, UK, Ireland, Australia & New Zealand.
@@ -220,8 +222,9 @@ export default function HomePage() {
             </div>
 
             {/* Phone mockup */}
-            <div className="flex justify-center">
-              <div className="bg-ink rounded-[2rem] p-3 w-72 shadow-2xl ring-1 ring-white/5">
+            <div className="relative flex justify-center">
+              <span className="glow-gold w-72 h-72 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-50" aria-hidden />
+              <div className="relative float bg-ink rounded-[2rem] p-3 w-72 shadow-[0_30px_60px_-15px_rgba(15,15,13,0.55)] ring-1 ring-white/10">
                 <div className="bg-[#1A1A16] rounded-[1.6rem] overflow-hidden">
                   <div className="flex justify-between items-center px-5 py-3 text-[10px] text-[#444440]">
                     <span>9:41</span>
@@ -274,7 +277,7 @@ export default function HomePage() {
 
       {/* ── MARQUEE ── */}
       <div className="bg-ink py-3.5 overflow-hidden">
-        <div className="flex gap-0 animate-[marquee_25s_linear_infinite] whitespace-nowrap">
+        <div className="fade-x flex gap-0 animate-[marquee_25s_linear_infinite] whitespace-nowrap">
           {[...Array(3)].map((_, i) => (
             <span key={i} className="flex gap-0 flex-shrink-0">
               {[
@@ -322,7 +325,7 @@ export default function HomePage() {
           <p className="text-2xs font-sans font-500 tracking-[0.14em] uppercase text-gold mb-4">The real cost of a missed call</p>
           <h2 className="font-serif text-5xl text-ink mb-6">
             You're not just losing a call.<br />
-            <em className="text-gold not-italic">You're losing the booking.</em>
+            <em className="text-gradient-gold not-italic">You're losing the booking.</em>
           </h2>
           <p className="text-sm font-sans text-ink-3 leading-relaxed max-w-xl mx-auto mb-14">
             The average service business misses 7 calls a day. At a $150 average booking value, that's over $1,000 gone every single week — not to a competitor, just to voicemail.
@@ -348,7 +351,7 @@ export default function HomePage() {
       <section id="how-it-works" className="py-24 px-6 bg-white border-b border-border">
         <div className="max-w-6xl mx-auto">
           <p className="text-2xs font-sans font-500 tracking-[0.14em] uppercase text-gold mb-3">Setup</p>
-          <h2 className="font-serif text-5xl text-ink mb-4">Live in <em className="text-gold not-italic">five minutes.</em></h2>
+          <h2 className="font-serif text-5xl text-ink mb-4">Live in <em className="text-gradient-gold not-italic">five minutes.</em></h2>
           <p className="text-sm font-sans text-ink-3 leading-relaxed max-w-lg mb-14">No tech skills. No developer. No downtime. Just sign up, connect your calendar, and forward your calls.</p>
           <div className="grid md:grid-cols-4 gap-6">
             {[
@@ -357,7 +360,7 @@ export default function HomePage() {
               { step: "3", icon: <Phone size={18} />, title: "Activate for $2.50", desc: "Pay $2.50 to get your dedicated local number. This is the only cost before your first plan." },
               { step: "4", icon: <ArrowRight size={18} />, title: "Forward your calls", desc: "Set unanswered calls to forward to your LemonAssistant number. Lisa is live and answering." },
             ].map(s => (
-              <div key={s.step} className="bg-cream rounded-xl p-8 border border-border relative overflow-hidden">
+              <div key={s.step} className="lift bg-cream rounded-xl p-8 border border-border relative overflow-hidden hover:border-gold-light">
                 <div className="font-serif text-8xl text-border/60 absolute -top-4 -right-2 select-none leading-none">{s.step}</div>
                 <div className="w-10 h-10 bg-white border border-gold-light rounded-lg flex items-center justify-center text-gold mb-5 relative">{s.icon}</div>
                 <h3 className="font-serif text-xl text-ink mb-2 relative">{s.title}</h3>
@@ -374,14 +377,14 @@ export default function HomePage() {
           <p className="text-2xs font-sans font-500 tracking-[0.14em] uppercase text-gold mb-3">Features</p>
           <h2 className="font-serif text-5xl text-ink mb-4">
             Everything your front desk does —<br />
-            <em className="text-gold not-italic">without the overhead.</em>
+            <em className="text-gradient-gold not-italic">without the overhead.</em>
           </h2>
           <p className="text-sm font-sans text-ink-3 leading-relaxed max-w-lg mb-14">
             From the first ring to the confirmation text, Lisa handles the full caller journey. You just see the results.
           </p>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
             {features.map((f, i) => (
-              <div key={i} className="bg-white border border-border rounded-xl p-6 hover:border-gold-light hover:shadow-sm transition-all duration-200">
+              <div key={i} className="lift bg-white border border-border rounded-xl p-6 hover:border-gold-light">
                 <div className="w-9 h-9 bg-gold-pale border border-gold-light rounded-lg flex items-center justify-center text-gold mb-4">{f.icon}</div>
                 <h3 className="font-serif text-base text-ink mb-2">{f.title}</h3>
                 <p className="text-xs font-sans text-ink-3 leading-relaxed">{f.desc}</p>
@@ -392,15 +395,16 @@ export default function HomePage() {
       </section>
 
       {/* ── $2.50 TRIAL SPOTLIGHT ── */}
-      <section className="py-24 px-6 bg-ink border-b border-[#1A1A16]">
-        <div className="max-w-4xl mx-auto text-center">
+      <section className="relative py-24 px-6 bg-ink border-b border-[#1A1A16] overflow-hidden">
+        <span className="glow-gold w-[40rem] h-[40rem] -top-48 left-1/2 -translate-x-1/2 opacity-70" aria-hidden />
+        <div className="relative z-10 max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 bg-gold/10 border border-gold/20 rounded-full px-5 py-2 mb-8">
             <span className="w-1.5 h-1.5 bg-gold rounded-full animate-pulse" />
             <span className="text-xs font-sans font-500 text-gold tracking-wide">Get started for just $2.50</span>
           </div>
           <h2 className="font-serif text-6xl text-white mb-6">
             $2.50 gets you<br />
-            <em className="text-gold not-italic">a real local number<br />+ 13 free minutes.</em>
+            <em className="text-gradient-gold not-italic">a real local number<br />+ 13 free minutes.</em>
           </h2>
           <p className="text-sm font-sans text-[#888880] leading-relaxed max-w-xl mx-auto mb-10">
             That's enough for several real conversations. See how Lisa answers, how she handles a booking, how she flags urgency — on your actual business, with your real callers.
@@ -433,7 +437,7 @@ export default function HomePage() {
       <section className="py-16 px-6 bg-white border-b border-border">
         <div className="max-w-4xl mx-auto text-center">
           <p className="text-2xs font-sans font-500 tracking-[0.14em] uppercase text-gold mb-4">Available in</p>
-          <h2 className="font-serif text-4xl text-ink mb-10">6 countries. <em className="text-gold not-italic">More coming.</em></h2>
+          <h2 className="font-serif text-4xl text-ink mb-10">6 countries. <em className="text-gradient-gold not-italic">More coming.</em></h2>
           <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
             {[
               { flag: "🇨🇦", name: "Canada" },
@@ -458,7 +462,7 @@ export default function HomePage() {
           <p className="text-2xs font-sans font-500 tracking-[0.14em] uppercase text-gold mb-3">Who it's for</p>
           <h2 className="font-serif text-5xl text-ink mb-4">
             If your business<br />
-            <em className="text-gold not-italic">takes calls, Lisa works.</em>
+            <em className="text-gradient-gold not-italic">takes calls, Lisa works.</em>
           </h2>
           <p className="text-sm font-sans text-ink-3 leading-relaxed max-w-lg mb-14">
             Any service business where customers call to book, inquire, or reach someone. Lisa handles the phone while you run the operation.
@@ -478,14 +482,14 @@ export default function HomePage() {
       <section id="pricing" className="py-24 px-6 bg-white border-b border-border">
         <div className="max-w-6xl mx-auto">
           <p className="text-2xs font-sans font-500 tracking-[0.14em] uppercase text-gold mb-3">Pricing</p>
-          <h2 className="font-serif text-5xl text-ink mb-4">Simple pricing.<br /><em className="text-gold not-italic">No surprises.</em></h2>
+          <h2 className="font-serif text-5xl text-ink mb-4">Simple pricing.<br /><em className="text-gradient-gold not-italic">No surprises.</em></h2>
           <p className="text-sm font-sans text-ink-3 leading-relaxed max-w-lg mb-3">
             Start with a $2.50 activation — get your local number and 13 free minutes. Upgrade when you're ready. Both plans include your AI receptionist, SMS, and live calendar booking.
           </p>
           <p className="text-xs font-sans text-gold font-500 mb-14">Save 20% with annual billing</p>
           <div className="grid md:grid-cols-2 gap-6 max-w-3xl">
             {plans.map(p => (
-              <div key={p.name} className={`rounded-xl p-8 border ${p.featured ? "bg-ink border-[#2A2A26]" : "bg-cream border-border"}`}>
+              <div key={p.name} className={`lift rounded-xl p-8 border ${p.featured ? "bg-ink border-[#2A2A26] shadow-[var(--shadow-lift)] ring-1 ring-gold/20" : "bg-cream border-border"}`}>
                 {p.featured && (
                   <div className="inline-flex items-center gap-1.5 bg-gold/10 border border-gold/20 rounded-full px-3 py-1 mb-5">
                     <Star size={10} className="text-gold fill-gold" />
@@ -521,11 +525,11 @@ export default function HomePage() {
           <p className="text-2xs font-sans font-500 tracking-[0.14em] uppercase text-gold mb-3">From the field</p>
           <h2 className="font-serif text-5xl text-ink mb-14">
             Businesses that run on calls<br />
-            <em className="text-gold not-italic">run on Lisa.</em>
+            <em className="text-gradient-gold not-italic">run on Lisa.</em>
           </h2>
           <div className="grid md:grid-cols-3 gap-6">
             {testimonials.map((t, i) => (
-              <div key={i} className="bg-white border border-border rounded-xl p-7 flex flex-col">
+              <div key={i} className="lift bg-white border border-border rounded-xl p-7 flex flex-col hover:border-gold-light">
                 <div className="flex gap-0.5 text-gold text-sm mb-5">{"★★★★★"}</div>
                 <p className="font-serif text-lg text-ink leading-relaxed mb-6 italic flex-1">&ldquo;{t.quote}&rdquo;</p>
                 <div className="flex items-center gap-3">
@@ -545,7 +549,7 @@ export default function HomePage() {
       <section className="py-24 px-6 bg-white border-b border-border">
         <div className="max-w-3xl mx-auto">
           <p className="text-2xs font-sans font-500 tracking-[0.14em] uppercase text-gold mb-3">FAQ</p>
-          <h2 className="font-serif text-5xl text-ink mb-12">Your questions,<br /><em className="text-gold not-italic">answered.</em></h2>
+          <h2 className="font-serif text-5xl text-ink mb-12">Your questions,<br /><em className="text-gradient-gold not-italic">answered.</em></h2>
           <div className="border border-border rounded-xl overflow-hidden bg-cream divide-y divide-border">
             {faqs.map((f, i) => <FaqItem key={i} q={f.q} a={f.a} />)}
           </div>
@@ -553,12 +557,13 @@ export default function HomePage() {
       </section>
 
       {/* ── FINAL CTA ── */}
-      <section className="py-28 px-6 bg-ink">
-        <div className="max-w-2xl mx-auto text-center">
-          <div className="w-16 h-16 bg-gold rounded-2xl flex items-center justify-center font-serif text-3xl font-600 text-ink mx-auto mb-8">L</div>
+      <section className="relative py-28 px-6 bg-ink overflow-hidden">
+        <span className="glow-gold w-[44rem] h-[44rem] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-60 animate-[glow_6s_ease-in-out_infinite]" aria-hidden />
+        <div className="relative z-10 max-w-2xl mx-auto text-center">
+          <div className="w-16 h-16 bg-gradient-to-br from-[#E0B400] to-[#A07E00] rounded-2xl flex items-center justify-center font-serif text-3xl font-600 text-ink mx-auto mb-8 shadow-[var(--shadow-gold-lg)]">L</div>
           <h2 className="font-serif text-6xl text-white mb-5">
             Your next caller<br />
-            <em className="text-gold not-italic">deserves an answer.</em>
+            <em className="text-gradient-gold not-italic">deserves an answer.</em>
           </h2>
           <p className="text-sm font-sans text-[#666660] mb-10 leading-relaxed">
             $2.50 gets you a local number and 13 free minutes.<br />
