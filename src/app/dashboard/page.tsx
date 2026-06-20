@@ -494,7 +494,7 @@ export default function DashboardPage() {
             )}
 
             {/* SIDEBAR */}
-            <aside className={`fixed top-0 left-0 h-full w-64 z-50 flex flex-col border-r transition-transform duration-300 md:translate-x-0 md:static md:z-auto ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} ${isDark ? "bg-[#0F0F0D] border-[#1A1A16]" : "bg-white border-border"}`}>
+            <aside className={`fixed top-0 left-0 h-full w-64 z-50 flex flex-col border-r transition-transform duration-300 md:translate-x-0 md:static md:z-auto shadow-[6px_0_30px_-18px_rgba(15,15,13,0.4)] ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} ${isDark ? "bg-[#0F0F0D] border-[#1A1A16]" : "bg-white border-border"}`}>
 
                 <div className={`px-6 py-5 border-b ${isDark ? "border-[#1A1A16]" : "border-border"}`}>
                     <div className="flex items-center justify-between">
@@ -508,7 +508,7 @@ export default function DashboardPage() {
                 {business && (
                     <div className={`px-6 py-4 border-b ${isDark ? "border-[#1A1A16]" : "border-border"}`}>
                         <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-gold rounded-lg flex items-center justify-center text-xs font-sans font-600 text-ink flex-shrink-0">
+                            <div className="w-8 h-8 bg-gradient-to-br from-[#E0B400] to-[#A07E00] rounded-lg flex items-center justify-center shadow-[var(--shadow-gold)] text-xs font-sans font-600 text-ink flex-shrink-0">
                                 {business.name.charAt(0)}
                             </div>
                             <div>
@@ -531,11 +531,11 @@ export default function DashboardPage() {
                         <button
                             key={item.id}
                             onClick={() => { setActive(item.id); setSidebarOpen(false) }}
-                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-sans transition-all duration-150 text-left ${active === item.id
-                                ? "bg-gold text-white font-500"
+                            className={`group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-sans transition-all duration-200 text-left ${active === item.id
+                                ? "bg-gradient-to-r from-gold to-[#A07E00] text-white font-500 shadow-[var(--shadow-gold)]"
                                 : isDark
-                                    ? "text-[#6A6A62] hover:bg-[#1A1A16] hover:text-[#F0EFE8]"
-                                    : "text-ink-3 hover:bg-cream hover:text-ink"
+                                    ? "text-[#6A6A62] hover:bg-[#1A1A16] hover:text-[#F0EFE8] hover:translate-x-0.5"
+                                    : "text-ink-3 hover:bg-cream hover:text-ink hover:translate-x-0.5"
                                 }`}
                         >
                             {item.icon}
@@ -572,7 +572,7 @@ export default function DashboardPage() {
             {/* MAIN */}
             <div className="flex-1 flex flex-col min-w-0">
 
-                <header className={`sticky top-0 z-30 flex items-center justify-between px-4 md:px-8 py-4 border-b ${isDark ? "bg-[#0F0F0D] border-[#1A1A16]" : "bg-white border-border"}`}>
+                <header className={`sticky top-0 z-30 flex items-center justify-between px-4 md:px-8 py-4 border-b backdrop-blur-xl shadow-[0_4px_24px_-18px_rgba(15,15,13,0.45)] ${isDark ? "bg-[#0F0F0D]/85 border-[#1A1A16]" : "bg-white/85 border-border"}`}>
                     <div className="flex items-center gap-4">
                         <button className="md:hidden text-ink-3" onClick={() => setSidebarOpen(true)}>
                             <Menu size={20} />
@@ -650,13 +650,13 @@ export default function DashboardPage() {
                                 </>
                             )}
                         </div>
-                        <div className="w-9 h-9 bg-gold rounded-lg flex items-center justify-center text-xs font-sans font-600 text-ink">
+                        <div className="w-9 h-9 bg-gradient-to-br from-[#E0B400] to-[#A07E00] rounded-lg flex items-center justify-center shadow-[var(--shadow-gold)] text-xs font-sans font-600 text-ink">
                             {business?.name?.charAt(0) || "B"}
                         </div>
                     </div>
                 </header>
 
-                <main className="flex-1 px-4 md:px-8 py-6 md:py-8 overflow-auto">
+                <main className="flex-1 px-4 md:px-8 py-6 md:py-8 overflow-auto" style={{ backgroundImage: "radial-gradient(1000px 560px at 100% -5%, rgba(196,154,0,0.06), transparent 60%)" }}>
 
                     {calendarStatus && (
                         <div className={`mb-6 px-5 py-3 rounded-lg text-sm font-sans flex items-center justify-between ${calendarStatus.includes("success") || calendarStatus.includes("saved") || calendarStatus.includes("complete") || calendarStatus.includes("blocked") || calendarStatus.includes("activated") || calendarStatus.includes("Trial")
@@ -694,7 +694,7 @@ export default function DashboardPage() {
                                 <div className={`rounded-xl border p-5 ${isDark ? "bg-[#1A1A16] border-gold/30" : "bg-gold-pale border-gold-light"}`}>
                                     <div className="flex items-start justify-between gap-4 flex-wrap">
                                         <div className="flex items-start gap-4">
-                                            <div className="w-10 h-10 bg-gold rounded-xl flex items-center justify-center flex-shrink-0">
+                                            <div className="w-10 h-10 bg-gradient-to-br from-[#E0B400] to-[#A07E00] rounded-xl flex items-center justify-center shadow-[var(--shadow-gold)] flex-shrink-0">
                                                 <Phone size={18} className="text-white" />
                                             </div>
                                             <div>
@@ -731,9 +731,9 @@ export default function DashboardPage() {
                                 <StatCard isDark={isDark} icon={<TrendingUp size={16} />} label="Booking rate" value={calls.length > 0 ? `${bookingRate}%` : "—"} sub="Calls that book" />
                             </div>
 
-                            <div className={`rounded-xl border p-5 flex items-center justify-between ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
+                            <div className={`rounded-xl border p-5 flex items-center justify-between shadow-[var(--shadow-card)] ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
                                 <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 bg-gold rounded-xl flex items-center justify-center font-serif text-lg font-600 text-ink">
+                                    <div className="w-10 h-10 bg-gradient-to-br from-[#E0B400] to-[#A07E00] rounded-xl flex items-center justify-center shadow-[var(--shadow-gold)] font-serif text-lg font-600 text-ink">
                                         {business?.ai_name?.charAt(0) || "L"}
                                     </div>
                                     <div>
@@ -754,7 +754,7 @@ export default function DashboardPage() {
                             </div>
 
                             <div className="grid md:grid-cols-2 gap-6">
-                                <div className={`rounded-xl border ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
+                                <div className={`rounded-xl border shadow-[var(--shadow-card)] ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
                                     <div className={`px-5 py-4 border-b flex items-center justify-between ${isDark ? "border-[#2A2A26]" : "border-border"}`}>
                                         <h3 className={`font-serif text-lg ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>Recent calls</h3>
                                         <button onClick={() => setActive("calls")} className="text-xs font-sans text-gold hover:text-gold-dark transition-colors flex items-center gap-1">
@@ -786,7 +786,7 @@ export default function DashboardPage() {
                                     )}
                                 </div>
 
-                                <div className={`rounded-xl border ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
+                                <div className={`rounded-xl border shadow-[var(--shadow-card)] ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
                                     <div className={`px-5 py-4 border-b flex items-center justify-between ${isDark ? "border-[#2A2A26]" : "border-border"}`}>
                                         <h3 className={`font-serif text-lg ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>Upcoming</h3>
                                         <button onClick={() => setActive("appointments")} className="text-xs font-sans text-gold hover:text-gold-dark transition-colors flex items-center gap-1">
@@ -824,7 +824,7 @@ export default function DashboardPage() {
                                 <div className="flex gap-2 flex-wrap">
                                     {["All", "Booked", "Urgent", "Missed"].map(f => (
                                         <button key={f} onClick={() => setCallFilter(f)}
-                                            className={`px-3 py-1.5 text-xs font-sans rounded-lg border transition-colors ${callFilter === f ? "bg-gold text-white border-gold" : "border-border text-ink-3 hover:border-gold hover:text-gold"}`}>
+                                            className={`px-3 py-1.5 text-xs font-sans rounded-lg border transition-all ${callFilter === f ? "bg-gradient-to-r from-gold to-[#A07E00] text-white border-transparent shadow-[var(--shadow-gold)]" : "border-border text-ink-3 hover:border-gold hover:text-gold"}`}>
                                             {f}
                                         </button>
                                     ))}
@@ -899,15 +899,16 @@ export default function DashboardPage() {
                                 <StatCard isDark={isDark} icon={<Clock size={16} />} label="Minutes used" value={String(minutesUsed)} sub="All time" />
                                 <StatCard isDark={isDark} icon={<Zap size={16} />} label="Urgent calls" value={String(calls.filter(c => c.urgent).length)} sub="Flagged as urgent" />
                             </div>
-                            <div className={`rounded-xl border p-6 ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
+                            <div className={`rounded-xl border p-6 shadow-[var(--shadow-card)] ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
                                 <h3 className={`font-serif text-lg mb-6 ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>Calls this week</h3>
                                 {calls.length === 0 ? (
                                     <EmptyState isDark={isDark} icon={<BarChart3 size={20} />} title="No data yet" sub="Call analytics will appear here once calls start coming in." />
                                 ) : (
-                                    <div className="flex items-end gap-3 h-32">
+                                    <div className="flex items-end gap-3 h-40">
                                         {weekData.map(d => (
-                                            <div key={d.day} className="flex-1 flex flex-col items-center gap-2">
-                                                <div className="w-full bg-gold rounded-sm transition-all duration-500"
+                                            <div key={d.day} className="group flex-1 flex flex-col items-center gap-2 h-full justify-end">
+                                                <span className={`text-2xs font-sans font-600 text-gold transition-opacity ${d.calls > 0 ? "opacity-0 group-hover:opacity-100" : "opacity-0"}`}>{d.calls}</span>
+                                                <div className="w-full bg-gradient-to-t from-[#A07E00] via-gold to-[#E6BE2E] rounded-t-md transition-all duration-500 group-hover:brightness-110 shadow-[0_2px_8px_-2px_rgba(196,154,0,0.4)]"
                                                     style={{ height: d.calls > 0 ? `${(d.calls / maxCalls) * 100}%` : "4px", opacity: d.calls > 0 ? 0.7 + (d.calls / maxCalls) * 0.3 : 0.2 }} />
                                                 <span className="text-2xs font-sans text-ink-3">{d.day}</span>
                                             </div>
@@ -916,7 +917,7 @@ export default function DashboardPage() {
                                 )}
                             </div>
                             <div className="grid md:grid-cols-2 gap-4">
-                                <div className={`rounded-xl border p-6 ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
+                                <div className={`rounded-xl border p-6 shadow-[var(--shadow-card)] ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
                                     <h3 className={`font-serif text-lg mb-4 ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>Call outcomes</h3>
                                     {calls.length === 0 ? (
                                         <p className="text-xs font-sans text-ink-3">No data yet</p>
@@ -937,7 +938,7 @@ export default function DashboardPage() {
                                         })
                                     )}
                                 </div>
-                                <div className={`rounded-xl border p-6 ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
+                                <div className={`rounded-xl border p-6 shadow-[var(--shadow-card)] ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
                                     <h3 className={`font-serif text-lg mb-4 ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>Your number</h3>
                                     <div className={`rounded-lg p-4 ${isDark ? "bg-[#0F0F0D]" : "bg-cream"} border ${isDark ? "border-[#2A2A26]" : "border-border"}`}>
                                         <p className="text-2xs font-sans text-ink-3 uppercase tracking-widest mb-1">LemonAssistant number</p>
@@ -954,7 +955,7 @@ export default function DashboardPage() {
                     {/* CALENDAR */}
                     {active === "calendar" && (
                         <div className="space-y-6 animate-[fadeIn_0.3s_ease] max-w-2xl">
-                            <div className={`rounded-xl border p-6 ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
+                            <div className={`rounded-xl border p-6 shadow-[var(--shadow-card)] ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
                                 <h3 className={`font-serif text-lg mb-1 ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>Your availability</h3>
                                 <p className="text-xs font-sans text-ink-3 mb-6">Set when your AI can book appointments.</p>
                                 <div className="space-y-3">
@@ -986,7 +987,7 @@ export default function DashboardPage() {
                                 </Button>
                             </div>
 
-                            <div className={`rounded-xl border p-6 ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
+                            <div className={`rounded-xl border p-6 shadow-[var(--shadow-card)] ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
                                 <h3 className={`font-serif text-lg mb-1 ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>Block dates</h3>
                                 <p className="text-xs font-sans text-ink-3 mb-5">Add holidays or days off — the AI won&apos;t book these dates.</p>
                                 <div className="flex gap-3 flex-wrap mb-4">
@@ -1012,7 +1013,7 @@ export default function DashboardPage() {
                                 )}
                             </div>
 
-                            <div className={`rounded-xl border p-6 ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
+                            <div className={`rounded-xl border p-6 shadow-[var(--shadow-card)] ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
                                 <h3 className={`font-serif text-lg mb-1 ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>Calendar connection</h3>
                                 <p className="text-xs font-sans text-ink-3 mb-5">Connect your calendar so appointments sync automatically.</p>
                                 <div className="space-y-3">
@@ -1049,7 +1050,7 @@ export default function DashboardPage() {
                     {/* SETTINGS */}
                     {active === "settings" && (
                         <div className="space-y-6 animate-[fadeIn_0.3s_ease] max-w-2xl">
-                            <div className={`rounded-xl border p-6 ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
+                            <div className={`rounded-xl border p-6 shadow-[var(--shadow-card)] ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
                                 <h3 className={`font-serif text-lg mb-1 ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>AI Agent</h3>
                                 <p className="text-xs font-sans text-ink-3 mb-5">Customize how your AI receptionist sounds and behaves.</p>
                                 <div className="space-y-4">
@@ -1077,7 +1078,7 @@ export default function DashboardPage() {
                                 </Button>
                             </div>
 
-                            <div className={`rounded-xl border p-6 ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
+                            <div className={`rounded-xl border p-6 shadow-[var(--shadow-card)] ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
                                 <h3 className={`font-serif text-lg mb-1 ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>Business profile</h3>
                                 <p className="text-xs font-sans text-ink-3 mb-5">This is what your AI knows about your business.</p>
                                 <div className="space-y-4">
@@ -1112,7 +1113,7 @@ export default function DashboardPage() {
                                 </Button>
                             </div>
 
-                            <div className={`rounded-xl border p-6 ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
+                            <div className={`rounded-xl border p-6 shadow-[var(--shadow-card)] ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
                                 <h3 className={`font-serif text-lg mb-1 ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>Working hours</h3>
                                 <p className="text-xs font-sans text-ink-3 mb-5">Your AI will only book appointments during these hours.</p>
                                 <div className="flex items-end gap-3">
@@ -1139,7 +1140,7 @@ export default function DashboardPage() {
                     {active === "billing" && (
                         <div className="space-y-6 animate-[fadeIn_0.3s_ease] max-w-2xl">
 
-                            <div className={`rounded-xl border p-6 ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
+                            <div className={`rounded-xl border p-6 shadow-[var(--shadow-card)] ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
                                 <div className="flex items-start justify-between mb-6">
                                     <div>
                                         <h3 className={`font-serif text-lg ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>Current plan</h3>
@@ -1162,7 +1163,7 @@ export default function DashboardPage() {
                                 </div>
                                 <div className={`w-full h-2 rounded-full overflow-hidden ${isDark ? "bg-[#2A2A26]" : "bg-cream-2"}`}>
                                     <div
-                                        className={`h-2 rounded-full transition-all duration-500 ${Math.round((minutesUsed / (subscription?.minutesLimit ?? 13)) * 100) >= 90 ? "bg-red-400" : "bg-gold"}`}
+                                        className={`h-2 rounded-full transition-all duration-500 ${Math.round((minutesUsed / (subscription?.minutesLimit ?? 13)) * 100) >= 90 ? "bg-red-400" : "bg-gradient-to-r from-[#A07E00] via-gold to-[#E6BE2E]"}`}
                                         style={{ width: `${Math.min(Math.round((minutesUsed / (subscription?.minutesLimit ?? 13)) * 100), 100)}%` }}
                                     />
                                 </div>
@@ -1180,7 +1181,7 @@ export default function DashboardPage() {
 
                             {/* Trial activation card */}
                             {!business?.phone_number && !subscription?.isActive && (
-                                <div className={`rounded-xl border p-6 ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
+                                <div className={`rounded-xl border p-6 shadow-[var(--shadow-card)] ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
                                     <h3 className={`font-serif text-lg mb-1 ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>Activate your free trial</h3>
                                     <p className="text-xs font-sans text-ink-3 mb-6">Get your dedicated Canadian phone number and start your 13-minute free trial.</p>
 
@@ -1228,7 +1229,7 @@ export default function DashboardPage() {
                             )}
 
                             {(!subscription?.isActive || subscription?.plan === "growth") && (
-                                <div className={`rounded-xl border p-6 ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
+                                <div className={`rounded-xl border p-6 shadow-[var(--shadow-card)] ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
                                     <h3 className={`font-serif text-lg mb-1 ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>
                                         {subscription?.isActive ? "Upgrade your plan" : "Choose a plan"}
                                     </h3>
@@ -1302,7 +1303,7 @@ export default function DashboardPage() {
                             )}
 
                             {subscription?.isActive && subscription?.plan === "pro" && (
-                                <div className={`rounded-xl border p-6 ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
+                                <div className={`rounded-xl border p-6 shadow-[var(--shadow-card)] ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
                                     <div className="flex items-center gap-4">
                                         <div className="w-10 h-10 bg-gold-pale rounded-xl flex items-center justify-center flex-shrink-0">
                                             <CheckCircle2 size={18} className="text-gold" />
