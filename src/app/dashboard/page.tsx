@@ -185,6 +185,7 @@ export default function DashboardPage() {
     const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null)
     const [billingLoading, setBillingLoading] = useState(false)
     const [bellOpen, setBellOpen] = useState(false)
+    const [upgradeProvince, setUpgradeProvince] = useState("")
     const [notificationsRead, setNotificationsRead] = useState(false)
     const [settingsForm, setSettingsForm] = useState({
         aiName: "",
@@ -316,13 +317,14 @@ export default function DashboardPage() {
         router.push("/")
     }
 
-    const handleUpgrade = async (plan: "growth" | "pro") => {
+    const handleUpgrade = async (plan: "growth" | "pro", areaCode: string) => {
+        if (!areaCode) { setCalendarStatus("Please select your province first."); return }
         setBillingLoading(true)
         try {
             const res = await fetch("/api/stripe/checkout", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ plan }),
+                body: JSON.stringify({ plan, areaCode }),
             })
             const data = await res.json()
             if (data.url) window.location.href = data.url
@@ -1226,7 +1228,7 @@ export default function DashboardPage() {
                                         style={{ width: `${Math.min(Math.round((minutesUsed / (subscription?.minutesLimit ?? 13)) * 100), 100)}%` }}
                                     />
                                 </div>
-                                {(Math.round((minutesUsed / (subscription?.minutesLimit ?? 13)) * 100)) >= 80 && (
+                                {Math.round((minutesUsed / (subscription?.minutesLimit ?? 13)) * 100) >= 80 && (
                                     <p className="text-2xs font-sans text-red-500 mt-2 flex items-center gap-1">
                                         <AlertTriangle size={10} /> You&apos;re running low on minutes
                                     </p>
@@ -1247,6 +1249,35 @@ export default function DashboardPage() {
                                     <p className="text-xs font-sans text-ink-3 mb-6">
                                         {subscription?.isExpired ? "Your trial has ended. Upgrade to keep your AI receptionist running." : "Unlock more minutes and features."}
                                     </p>
+
+                                    {/* Province picker */}
+                                    <div className="mb-6">
+                                        <label className="block text-2xs font-sans font-500 text-ink-3 mb-2 tracking-[0.1em] uppercase">
+                                            Your province <span className="text-red-400">*</span>
+                                        </label>
+                                        <select
+                                            value={upgradeProvince}
+                                            onChange={e => setUpgradeProvince(e.target.value)}
+                                            className={`w-full px-4 py-2.5 text-sm font-sans border rounded-lg focus:outline-none focus:border-gold transition-colors ${isDark ? "bg-[#0F0F0D] border-[#2A2A26] text-[#F0EFE8]" : "bg-white border-border text-ink"}`}
+                                        >
+                                            <option value="">Select province for your phone number</option>
+                                            <option value="403">Alberta (403)</option>
+                                            <option value="604">British Columbia (604)</option>
+                                            <option value="204">Manitoba (204)</option>
+                                            <option value="506">New Brunswick (506)</option>
+                                            <option value="709">Newfoundland (709)</option>
+                                            <option value="902">Nova Scotia / PEI (902)</option>
+                                            <option value="416">Ontario (416)</option>
+                                            <option value="514">Quebec (514)</option>
+                                            <option value="306">Saskatchewan (306)</option>
+                                        </select>
+                                        {upgradeProvince && (
+                                            <p className="text-2xs text-ink-3 font-sans mt-1.5">
+                                                You&apos;ll get a local <strong className="text-gold">{upgradeProvince}</strong> area code number after upgrading.
+                                            </p>
+                                        )}
+                                    </div>
+
                                     <div className="grid md:grid-cols-2 gap-4">
                                         {[
                                             {
@@ -1287,7 +1318,7 @@ export default function DashboardPage() {
                                                         variant={plan.featured ? "gold" : "secondary"}
                                                         size="sm"
                                                         className="w-full"
-                                                        onClick={() => handleUpgrade(plan.id)}
+                                                        onClick={() => handleUpgrade(plan.id, upgradeProvince)}
                                                         disabled={billingLoading}
                                                     >
                                                         {billingLoading ? "Loading..." : `Upgrade to ${plan.name} →`}

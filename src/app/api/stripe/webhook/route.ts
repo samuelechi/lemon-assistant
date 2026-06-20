@@ -37,6 +37,104 @@ async function patchVapiAssistant(userId: string, maxDurationSeconds: number) {
     }
 }
 
+async function provisionPhoneNumber(userId: string, areaCode: string) {
+    const accountSid = process.env.TWILIO_ACCOUNT_SID!
+    const authToken = process.env.TWILIO_AUTH_TOKEN!
+
+    try {
+        const { data: business } = await supabase
+            .from("businesses")
+            .select("id, vapi_assistant_id, phone_number")
+            .eq("user_id", userId)
+            .single()
+
+        if (!business?.vapi_assistant_id) {
+            console.error("No Vapi assistant found for user:", userId)
+            return
+        }
+
+        // Skip if already has a number
+        if (business.phone_number) {
+            console.log("Business already has a phone number, skipping provisioning")
+            return
+        }
+
+        // Search for available Canadian number
+        const searchRes = await fetch(
+            `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/AvailablePhoneNumbers/CA/Local.json?AreaCode=${areaCode}&SmsEnabled=true&VoiceEnabled=true&Limit=1`,
+            { headers: { Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}` } }
+        )
+
+        if (!searchRes.ok) throw new Error(`Twilio search failed: ${await searchRes.text()}`)
+
+        const searchData = await searchRes.json()
+        const available = searchData.available_phone_numbers
+
+        // Fallback to 416 (Ontario) if no numbers in requested area code
+        let numberToBuy = available?.[0]?.phone_number
+        if (!numberToBuy) {
+            console.log(`No numbers for area code ${areaCode}, falling back to 416`)
+            const fallbackRes = await fetch(
+                `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/AvailablePhoneNumbers/CA/Local.json?AreaCode=416&SmsEnabled=true&VoiceEnabled=true&Limit=1`,
+                { headers: { Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}` } }
+            )
+            const fallbackData = await fallbackRes.json()
+            numberToBuy = fallbackData.available_phone_numbers?.[0]?.phone_number
+        }
+
+        if (!numberToBuy) throw new Error("No Canadian numbers available")
+
+        // Purchase the number
+        const buyRes = await fetch(
+            `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/IncomingPhoneNumbers.json`,
+            {
+                method: "POST",
+                headers: {
+                    Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`,
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                body: new URLSearchParams({ PhoneNumber: numberToBuy }).toString(),
+            }
+        )
+
+        if (!buyRes.ok) throw new Error(`Twilio purchase failed: ${await buyRes.text()}`)
+        const buyData = await buyRes.json()
+
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL!
+
+        // Import into Vapi and link to assistant
+        const importRes = await fetch(`${VAPI_BASE}/phone-number`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${VAPI_API_KEY}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                provider: "twilio",
+                number: buyData.phone_number,
+                twilioAccountSid: accountSid,
+                twilioAuthToken: authToken,
+                assistantId: business.vapi_assistant_id,
+                serverUrl: `${appUrl}/api/vapi/webhook`,
+            }),
+        })
+
+        if (!importRes.ok) throw new Error(`Vapi import failed: ${await importRes.text()}`)
+        const vapiPhone = await importRes.json()
+
+        // Save to business
+        await supabase.from("businesses").update({
+            phone_number: buyData.phone_number,
+            vapi_phone_id: vapiPhone.id,
+        }).eq("user_id", userId)
+
+        console.log(`Provisioned number ${buyData.phone_number} for user ${userId}`)
+    } catch (err) {
+        console.error("Phone provisioning failed:", err)
+        // Non-fatal — subscription is still active, number can be retried
+    }
+}
+
 export async function POST(req: NextRequest) {
     const body = await req.text()
     const sig = req.headers.get("stripe-signature")!
@@ -56,6 +154,7 @@ export async function POST(req: NextRequest) {
                 const userId = session.metadata?.userId
                 const businessId = session.metadata?.businessId
                 const plan = session.metadata?.plan
+                const areaCode = session.metadata?.areaCode || "416"
 
                 if (!userId || !businessId) break
 
@@ -72,6 +171,9 @@ export async function POST(req: NextRequest) {
                 }, { onConflict: "user_id" })
 
                 await patchVapiAssistant(userId, 600)
+
+                // Provision Canadian phone number on first upgrade
+                await provisionPhoneNumber(userId, areaCode)
                 break
             }
 
@@ -85,11 +187,7 @@ export async function POST(req: NextRequest) {
 
                 if (!sub) break
 
-                // FIX: Read plan from price metadata so upgrades via the
-                // Stripe portal are synced correctly. Falls back to "growth"
-                // only if metadata wasn't set — which it now is on both prices.
-                const updatedPlan =
-                    subscription.items.data[0]?.price.metadata?.plan || "growth"
+                const updatedPlan = subscription.items.data[0]?.price.metadata?.plan || "growth"
 
                 await supabase.from("subscriptions").update({
                     status: subscription.status === "active" ? "active" : "inactive",
@@ -97,10 +195,7 @@ export async function POST(req: NextRequest) {
                     current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
                 }).eq("stripe_subscription_id", subscription.id)
 
-                await patchVapiAssistant(
-                    sub.user_id,
-                    subscription.status === "active" ? 600 : 10
-                )
+                await patchVapiAssistant(sub.user_id, subscription.status === "active" ? 600 : 10)
                 break
             }
 
