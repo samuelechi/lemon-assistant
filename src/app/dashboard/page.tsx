@@ -753,7 +753,7 @@ export default function DashboardPage() {
                                 </Button>
                             </div>
 
-                            <div className="grid md:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className={`rounded-xl border shadow-[var(--shadow-card)] ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
                                     <div className={`px-5 py-4 border-b flex items-center justify-between ${isDark ? "border-[#2A2A26]" : "border-border"}`}>
                                         <h3 className={`font-serif text-lg ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>Recent calls</h3>
@@ -916,7 +916,7 @@ export default function DashboardPage() {
                                     </div>
                                 )}
                             </div>
-                            <div className="grid md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className={`rounded-xl border p-6 shadow-[var(--shadow-card)] ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
                                     <h3 className={`font-serif text-lg mb-4 ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>Call outcomes</h3>
                                     {calls.length === 0 ? (
@@ -1256,7 +1256,7 @@ export default function DashboardPage() {
                                         </div>
                                     )}
 
-                                    <div className="grid md:grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {[
                                             {
                                                 id: "growth" as const,
