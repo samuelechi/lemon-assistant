@@ -10,8 +10,8 @@ export async function POST(req: NextRequest) {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-        const { areaCode } = await req.json()
-        if (!areaCode) return NextResponse.json({ error: "Province required" }, { status: 400 })
+        const { country } = await req.json()
+        if (!country) return NextResponse.json({ error: "Country required" }, { status: 400 })
 
         const { data: business } = await supabase
             .from("businesses")
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
             metadata: {
                 userId: user.id,
                 businessId: business.id,
-                areaCode,
+                country,
                 type: "trial_activation",
             },
         })

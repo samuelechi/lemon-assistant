@@ -1,3 +1,4 @@
+
 "use client"
 import { useState } from "react"
 import Link from "next/link"
@@ -7,11 +8,9 @@ import { Logo } from "@/components/ui/Logo"
 import {
   Phone, Calendar, MessageSquare, Clock, Bell,
   AlertTriangle, BarChart3, ArrowRight,
-  CheckCircle2, Zap, Globe, PhoneOff, PhoneMissed,
+  CheckCircle2, Zap, Globe, PhoneOff,
   ChevronDown, Star
 } from "lucide-react"
-
-// ─── DATA ────────────────────────────────────────────────────────────────────
 
 const features = [
   {
@@ -75,7 +74,7 @@ const plans = [
   {
     name: "Growth",
     price: "$99",
-    cadNote: "CAD / month",
+    cadNote: "/ month",
     mins: "250 minutes included",
     featured: false,
     features: [
@@ -92,7 +91,7 @@ const plans = [
   {
     name: "Pro",
     price: "$199",
-    cadNote: "CAD / month",
+    cadNote: "/ month",
     mins: "600 minutes included",
     featured: true,
     features: [
@@ -135,8 +134,12 @@ const faqs = [
     a: "No. Keep your existing number. Forward unanswered calls to your LemonAssistant number — callers never notice anything different.",
   },
   {
-    q: "What does '13 free minutes' actually mean?",
-    a: "Your trial includes 13 minutes of real AI call time — enough for several full conversations. No credit card, no commitment. See exactly how Lisa handles your callers before spending a dollar.",
+    q: "What does '$2.50 trial activation' mean?",
+    a: "Your $2.50 covers your dedicated local phone number in your country. This filters out bots and ensures you get a real number immediately. Then you get 13 minutes of real AI call time — enough for several full conversations — before committing to a plan.",
+  },
+  {
+    q: "Which countries are supported?",
+    a: "Canada, United States, United Kingdom, Ireland, Australia, and New Zealand. More countries coming soon.",
   },
   {
     q: "What calendar does it connect to?",
@@ -156,32 +159,20 @@ const faqs = [
   },
 ]
 
-// ─── FAQ ITEM ─────────────────────────────────────────────────────────────────
-
 function FaqItem({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false)
   return (
-    <div
-      className="border-b border-border last:border-0 cursor-pointer"
-      onClick={() => setOpen(p => !p)}
-    >
+    <div className="border-b border-border last:border-0 cursor-pointer" onClick={() => setOpen(p => !p)}>
       <div className="flex justify-between items-center px-7 py-5">
         <span className="font-sans font-500 text-sm text-ink pr-8">{q}</span>
-        <ChevronDown
-          size={16}
-          className={`text-gold flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
-        />
+        <ChevronDown size={16} className={`text-gold flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
       </div>
       {open && (
-        <div className="px-7 pb-5 text-sm font-sans text-ink-3 leading-relaxed">
-          {a}
-        </div>
+        <div className="px-7 pb-5 text-sm font-sans text-ink-3 leading-relaxed">{a}</div>
       )}
     </div>
   )
 }
-
-// ─── PAGE ─────────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
   return (
@@ -191,32 +182,29 @@ export default function HomePage() {
       {/* ── HERO ── */}
       <section className="pt-32 pb-24 px-6 bg-white border-b border-border overflow-hidden">
         <div className="max-w-6xl mx-auto">
-
-          {/* Trial pill */}
           <div className="flex justify-center md:justify-start mb-10">
             <div className="inline-flex items-center gap-2.5 bg-gold-pale border border-gold-light rounded-full px-5 py-2">
               <span className="w-1.5 h-1.5 bg-gold rounded-full animate-pulse" />
               <span className="text-xs font-sans font-500 text-gold-dark tracking-wide">
-                13 free minutes · no credit card
+                Start for just $2.50 · Your dedicated number, instant setup
               </span>
             </div>
           </div>
 
           <div className="grid md:grid-cols-2 gap-16 items-center">
             <div>
-              {/* Pain-first headline */}
               <h1 className="font-serif text-6xl leading-[1.05] text-ink mb-3">
                 Every missed call<br />is a customer<br />
                 <em className="text-gold not-italic">someone else booked.</em>
               </h1>
               <p className="text-sm font-sans text-ink-3 leading-relaxed mb-8 max-w-md mt-6">
-                LemonAssistant answers your phone 24/7, books appointments live, and sends confirmations — so you can focus on the work, not the ring.
+                LemonAssistant answers your phone 24/7, books appointments live, and sends confirmations — so you can focus on the work, not the ring. Available in Canada, US, UK, Ireland, Australia & New Zealand.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center mb-8">
                 <Link href="/signup">
                   <Button variant="gold" size="lg">
-                    Try free — 13 minutes on us
+                    Get started for $2.50
                     <ArrowRight size={15} className="ml-2" />
                   </Button>
                 </Link>
@@ -225,10 +213,9 @@ export default function HomePage() {
                 </Link>
               </div>
 
-              {/* Trust line */}
               <div className="flex items-center gap-3 text-xs text-ink-3 font-sans">
                 <div className="flex gap-0.5 text-gold text-sm">{"★★★★★"}</div>
-                <span>Trusted by service businesses across Canada</span>
+                <span>Trusted by service businesses across 6 countries</span>
               </div>
             </div>
 
@@ -247,13 +234,10 @@ export default function HomePage() {
                     <div className="relative w-16 h-16 mx-auto mb-1">
                       <div className="absolute inset-0 rounded-full bg-gold/10 animate-ping" />
                       <div className="absolute inset-2 rounded-full bg-gold/20 animate-ping [animation-delay:0.3s]" />
-                      <div className="relative w-16 h-16 bg-gold rounded-full flex items-center justify-center font-serif text-2xl font-600 text-ink">
-                        L
-                      </div>
+                      <div className="relative w-16 h-16 bg-gold rounded-full flex items-center justify-center font-serif text-2xl font-600 text-ink">L</div>
                     </div>
                     <p className="font-sans text-white text-center text-sm font-500 mt-3">Lisa</p>
                     <p className="text-[10px] text-[#444440] text-center mb-5 font-sans">AI Receptionist · LemonAssistant</p>
-
                     <div className="bg-[#111110] rounded-xl p-3.5 space-y-3 mb-4">
                       <div>
                         <p className="text-[8px] text-[#444440] mb-1 uppercase tracking-widest font-sans">Caller</p>
@@ -271,16 +255,11 @@ export default function HomePage() {
                         <div className="w-5 h-5 bg-gold rounded-full flex items-center justify-center text-[8px] font-700 text-ink font-sans flex-shrink-0">L</div>
                         <div className="flex gap-1 items-center">
                           {[0, 1, 2].map(i => (
-                            <span
-                              key={i}
-                              className="w-1.5 h-1.5 bg-gold rounded-full animate-bounce"
-                              style={{ animationDelay: `${i * 0.18}s` }}
-                            />
+                            <span key={i} className="w-1.5 h-1.5 bg-gold rounded-full animate-bounce" style={{ animationDelay: `${i * 0.18}s` }} />
                           ))}
                         </div>
                       </div>
                     </div>
-
                     <div className="flex items-center justify-center gap-1.5">
                       <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
                       <span className="text-[10px] text-green-400 font-sans">Lisa is booking Thursday 10 AM</span>
@@ -303,12 +282,12 @@ export default function HomePage() {
                 "Books appointments live",
                 "SMS confirmations",
                 "24 / 7 availability",
-                "No credit card to start",
+                "Start for $2.50",
                 "13 free minutes",
                 "Urgent call alerts",
                 "Calendar sync",
                 "Call summaries",
-                "Multi-language",
+                "6 countries supported",
               ].map(t => (
                 <span key={t} className="text-[10px] font-sans font-500 text-gold tracking-[0.18em] uppercase flex items-center gap-0">
                   <span className="px-8">{t}</span>
@@ -361,9 +340,7 @@ export default function HomePage() {
               </div>
             ))}
           </div>
-          <p className="text-xs font-sans text-ink-3 mt-5">
-            LemonAssistant Growth plan costs $99/month. The math does itself.
-          </p>
+          <p className="text-xs font-sans text-ink-3 mt-5">LemonAssistant Growth plan costs $99/month. The math does itself.</p>
         </div>
       </section>
 
@@ -371,40 +348,18 @@ export default function HomePage() {
       <section id="how-it-works" className="py-24 px-6 bg-white border-b border-border">
         <div className="max-w-6xl mx-auto">
           <p className="text-2xs font-sans font-500 tracking-[0.14em] uppercase text-gold mb-3">Setup</p>
-          <h2 className="font-serif text-5xl text-ink mb-4">
-            Live in <em className="text-gold not-italic">five minutes.</em>
-          </h2>
-          <p className="text-sm font-sans text-ink-3 leading-relaxed max-w-lg mb-14">
-            No tech skills. No developer. No downtime. Just sign up, connect your calendar, and forward your calls.
-          </p>
-          <div className="grid md:grid-cols-3 gap-6">
+          <h2 className="font-serif text-5xl text-ink mb-4">Live in <em className="text-gold not-italic">five minutes.</em></h2>
+          <p className="text-sm font-sans text-ink-3 leading-relaxed max-w-lg mb-14">No tech skills. No developer. No downtime. Just sign up, connect your calendar, and forward your calls.</p>
+          <div className="grid md:grid-cols-4 gap-6">
             {[
-              {
-                step: "1",
-                icon: <Zap size={18} />,
-                title: "Tell Lisa about your business",
-                desc: "Name, type, working hours, services. Lisa uses this to answer caller questions accurately from day one.",
-              },
-              {
-                step: "2",
-                icon: <Calendar size={18} />,
-                title: "Connect your calendar",
-                desc: "Google Calendar, Outlook, Calendly, or Apple — one click. Lisa checks it live during every call.",
-              },
-              {
-                step: "3",
-                icon: <Phone size={18} />,
-                title: "Forward your calls",
-                desc: "Set unanswered calls to forward to your LemonAssistant number. That's it — Lisa is live and answering.",
-              },
+              { step: "1", icon: <Zap size={18} />, title: "Sign up free", desc: "Enter your business details. Takes 2 minutes. No credit card needed to create your account." },
+              { step: "2", icon: <Calendar size={18} />, title: "Connect your calendar", desc: "Google Calendar, Outlook, Calendly, or Apple — one click. Lisa checks it live during every call." },
+              { step: "3", icon: <Phone size={18} />, title: "Activate for $2.50", desc: "Pay $2.50 to get your dedicated local number. This is the only cost before your first plan." },
+              { step: "4", icon: <ArrowRight size={18} />, title: "Forward your calls", desc: "Set unanswered calls to forward to your LemonAssistant number. Lisa is live and answering." },
             ].map(s => (
               <div key={s.step} className="bg-cream rounded-xl p-8 border border-border relative overflow-hidden">
-                <div className="font-serif text-8xl text-border/60 absolute -top-4 -right-2 select-none leading-none">
-                  {s.step}
-                </div>
-                <div className="w-10 h-10 bg-white border border-gold-light rounded-lg flex items-center justify-center text-gold mb-5 relative">
-                  {s.icon}
-                </div>
+                <div className="font-serif text-8xl text-border/60 absolute -top-4 -right-2 select-none leading-none">{s.step}</div>
+                <div className="w-10 h-10 bg-white border border-gold-light rounded-lg flex items-center justify-center text-gold mb-5 relative">{s.icon}</div>
                 <h3 className="font-serif text-xl text-ink mb-2 relative">{s.title}</h3>
                 <p className="text-sm font-sans text-ink-3 leading-relaxed relative">{s.desc}</p>
               </div>
@@ -427,9 +382,7 @@ export default function HomePage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
             {features.map((f, i) => (
               <div key={i} className="bg-white border border-border rounded-xl p-6 hover:border-gold-light hover:shadow-sm transition-all duration-200">
-                <div className="w-9 h-9 bg-gold-pale border border-gold-light rounded-lg flex items-center justify-center text-gold mb-4">
-                  {f.icon}
-                </div>
+                <div className="w-9 h-9 bg-gold-pale border border-gold-light rounded-lg flex items-center justify-center text-gold mb-4">{f.icon}</div>
                 <h3 className="font-serif text-base text-ink mb-2">{f.title}</h3>
                 <p className="text-xs font-sans text-ink-3 leading-relaxed">{f.desc}</p>
               </div>
@@ -438,16 +391,16 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── 13 MIN TRIAL SPOTLIGHT ── */}
+      {/* ── $2.50 TRIAL SPOTLIGHT ── */}
       <section className="py-24 px-6 bg-ink border-b border-[#1A1A16]">
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 bg-gold/10 border border-gold/20 rounded-full px-5 py-2 mb-8">
             <span className="w-1.5 h-1.5 bg-gold rounded-full animate-pulse" />
-            <span className="text-xs font-sans font-500 text-gold tracking-wide">Free trial · no card required</span>
+            <span className="text-xs font-sans font-500 text-gold tracking-wide">Get started for just $2.50</span>
           </div>
           <h2 className="font-serif text-6xl text-white mb-6">
-            13 minutes.<br />
-            <em className="text-gold not-italic">On us.</em>
+            $2.50 gets you<br />
+            <em className="text-gold not-italic">a real local number<br />+ 13 free minutes.</em>
           </h2>
           <p className="text-sm font-sans text-[#888880] leading-relaxed max-w-xl mx-auto mb-10">
             That's enough for several real conversations. See how Lisa answers, how she handles a booking, how she flags urgency — on your actual business, with your real callers.
@@ -455,9 +408,9 @@ export default function HomePage() {
           </p>
           <div className="grid md:grid-cols-3 gap-4 mb-12 text-left">
             {[
-              { icon: <CheckCircle2 size={14} />, title: "Real AI call time", desc: "Not a sandbox. Your actual number, your actual callers." },
-              { icon: <CheckCircle2 size={14} />, title: "No credit card", desc: "Sign up, set up, and start answering calls — nothing required." },
-              { icon: <CheckCircle2 size={14} />, title: "Keep your setup", desc: "When you upgrade, everything you configured carries over instantly." },
+              { icon: <CheckCircle2 size={14} />, title: "Your own local number", desc: "CA, US, UK, IE, AU or NZ number assigned instantly after payment." },
+              { icon: <CheckCircle2 size={14} />, title: "13 minutes of real AI calls", desc: "Not a sandbox. Your actual number, your actual callers." },
+              { icon: <CheckCircle2 size={14} />, title: "Keep everything on upgrade", desc: "When you upgrade, your number and settings carry over instantly." },
             ].map((item, i) => (
               <div key={i} className="bg-[#1A1A16] border border-[#2A2A26] rounded-xl p-5">
                 <div className="text-gold mb-3">{item.icon}</div>
@@ -468,16 +421,39 @@ export default function HomePage() {
           </div>
           <Link href="/signup">
             <Button variant="gold" size="lg">
-              Start your free 13 minutes
+              Get started for $2.50
               <ArrowRight size={15} className="ml-2" />
             </Button>
           </Link>
-          <p className="text-xs font-sans text-[#444440] mt-4">Takes 5 minutes to set up · Cancel any time</p>
+          <p className="text-xs font-sans text-[#444440] mt-4">Takes 5 minutes to set up · No subscription until you're ready</p>
+        </div>
+      </section>
+
+      {/* ── COUNTRIES ── */}
+      <section className="py-16 px-6 bg-white border-b border-border">
+        <div className="max-w-4xl mx-auto text-center">
+          <p className="text-2xs font-sans font-500 tracking-[0.14em] uppercase text-gold mb-4">Available in</p>
+          <h2 className="font-serif text-4xl text-ink mb-10">6 countries. <em className="text-gold not-italic">More coming.</em></h2>
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
+            {[
+              { flag: "🇨🇦", name: "Canada" },
+              { flag: "🇺🇸", name: "United States" },
+              { flag: "🇬🇧", name: "United Kingdom" },
+              { flag: "🇮🇪", name: "Ireland" },
+              { flag: "🇦🇺", name: "Australia" },
+              { flag: "🇳🇿", name: "New Zealand" },
+            ].map((c, i) => (
+              <div key={i} className="bg-cream border border-border rounded-xl p-5 text-center hover:border-gold-light transition-colors">
+                <div className="text-3xl mb-2">{c.flag}</div>
+                <p className="text-xs font-sans font-500 text-ink">{c.name}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* ── INDUSTRIES ── */}
-      <section id="industries" className="py-24 px-6 bg-white border-b border-border">
+      <section id="industries" className="py-24 px-6 bg-cream border-b border-border">
         <div className="max-w-6xl mx-auto">
           <p className="text-2xs font-sans font-500 tracking-[0.14em] uppercase text-gold mb-3">Who it's for</p>
           <h2 className="font-serif text-5xl text-ink mb-4">
@@ -499,74 +475,48 @@ export default function HomePage() {
       </section>
 
       {/* ── PRICING ── */}
-      <section id="pricing" className="py-24 px-6 bg-cream border-b border-border">
+      <section id="pricing" className="py-24 px-6 bg-white border-b border-border">
         <div className="max-w-6xl mx-auto">
           <p className="text-2xs font-sans font-500 tracking-[0.14em] uppercase text-gold mb-3">Pricing</p>
-          <h2 className="font-serif text-5xl text-ink mb-4">
-            Simple pricing.<br />
-            <em className="text-gold not-italic">No surprises.</em>
-          </h2>
+          <h2 className="font-serif text-5xl text-ink mb-4">Simple pricing.<br /><em className="text-gold not-italic">No surprises.</em></h2>
           <p className="text-sm font-sans text-ink-3 leading-relaxed max-w-lg mb-3">
-            Start with 13 free minutes — no card needed. Upgrade when you're ready. Both plans include your AI receptionist, SMS, and live calendar booking.
+            Start with a $2.50 activation — get your local number and 13 free minutes. Upgrade when you're ready. Both plans include your AI receptionist, SMS, and live calendar booking.
           </p>
-          <p className="text-xs font-sans text-gold font-500 mb-14">
-            Save 20% with annual billing
-          </p>
-
+          <p className="text-xs font-sans text-gold font-500 mb-14">Save 20% with annual billing</p>
           <div className="grid md:grid-cols-2 gap-6 max-w-3xl">
             {plans.map(p => (
-              <div
-                key={p.name}
-                className={`rounded-xl p-8 border ${p.featured
-                  ? "bg-ink border-[#2A2A26]"
-                  : "bg-white border-border"
-                  }`}
-              >
+              <div key={p.name} className={`rounded-xl p-8 border ${p.featured ? "bg-ink border-[#2A2A26]" : "bg-cream border-border"}`}>
                 {p.featured && (
                   <div className="inline-flex items-center gap-1.5 bg-gold/10 border border-gold/20 rounded-full px-3 py-1 mb-5">
                     <Star size={10} className="text-gold fill-gold" />
                     <span className="text-2xs font-sans font-500 text-gold">Most popular</span>
                   </div>
                 )}
-                <p className={`text-2xs font-sans font-500 tracking-[0.12em] uppercase mb-3 ${p.featured ? "text-gold" : "text-ink-3"}`}>
-                  {p.name}
-                </p>
-                <div className={`font-serif text-5xl mb-1 ${p.featured ? "text-gold" : "text-ink"}`}>
-                  {p.price}
-                </div>
-                <p className={`text-xs font-sans mb-1 ${p.featured ? "text-[#555550]" : "text-ink-3"}`}>
-                  {p.cadNote}
-                </p>
-                <p className={`text-xs font-sans mb-7 font-500 ${p.featured ? "text-[#888880]" : "text-ink-3"}`}>
-                  {p.mins}
-                </p>
+                <p className={`text-2xs font-sans font-500 tracking-[0.12em] uppercase mb-3 ${p.featured ? "text-gold" : "text-ink-3"}`}>{p.name}</p>
+                <div className={`font-serif text-5xl mb-1 ${p.featured ? "text-gold" : "text-ink"}`}>{p.price}</div>
+                <p className={`text-xs font-sans mb-1 ${p.featured ? "text-[#555550]" : "text-ink-3"}`}>{p.cadNote}</p>
+                <p className={`text-xs font-sans mb-7 font-500 ${p.featured ? "text-[#888880]" : "text-ink-3"}`}>{p.mins}</p>
                 <ul className="space-y-3 mb-8">
                   {p.features.map(f => (
-                    <li
-                      key={f}
-                      className={`flex items-center gap-2.5 text-sm font-sans ${p.featured ? "text-[#888880]" : "text-ink-3"}`}
-                    >
-                      <CheckCircle2 size={13} className="text-gold flex-shrink-0" />
-                      {f}
+                    <li key={f} className={`flex items-center gap-2.5 text-sm font-sans ${p.featured ? "text-[#888880]" : "text-ink-3"}`}>
+                      <CheckCircle2 size={13} className="text-gold flex-shrink-0" /> {f}
                     </li>
                   ))}
                 </ul>
                 <Link href="/signup">
                   <Button variant={p.featured ? "gold" : "secondary"} size="lg" className="w-full">
-                    Start free — 13 min trial
+                    Start for $2.50
                   </Button>
                 </Link>
               </div>
             ))}
           </div>
-          <p className="text-xs font-sans text-ink-3 mt-6">
-            No credit card to start · Cancel any time · All prices in CAD
-          </p>
+          <p className="text-xs font-sans text-ink-3 mt-6">$2.50 activation · No subscription until you're ready · Cancel any time</p>
         </div>
       </section>
 
       {/* ── TESTIMONIALS ── */}
-      <section className="py-24 px-6 bg-white border-b border-border">
+      <section className="py-24 px-6 bg-cream border-b border-border">
         <div className="max-w-6xl mx-auto">
           <p className="text-2xs font-sans font-500 tracking-[0.14em] uppercase text-gold mb-3">From the field</p>
           <h2 className="font-serif text-5xl text-ink mb-14">
@@ -575,15 +525,11 @@ export default function HomePage() {
           </h2>
           <div className="grid md:grid-cols-3 gap-6">
             {testimonials.map((t, i) => (
-              <div key={i} className="bg-cream border border-border rounded-xl p-7 flex flex-col">
+              <div key={i} className="bg-white border border-border rounded-xl p-7 flex flex-col">
                 <div className="flex gap-0.5 text-gold text-sm mb-5">{"★★★★★"}</div>
-                <p className="font-serif text-lg text-ink leading-relaxed mb-6 italic flex-1">
-                  &ldquo;{t.quote}&rdquo;
-                </p>
+                <p className="font-serif text-lg text-ink leading-relaxed mb-6 italic flex-1">&ldquo;{t.quote}&rdquo;</p>
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 bg-ink rounded-full flex items-center justify-center font-sans text-xs font-500 text-gold flex-shrink-0">
-                    {t.initials}
-                  </div>
+                  <div className="w-9 h-9 bg-ink rounded-full flex items-center justify-center font-sans text-xs font-500 text-gold flex-shrink-0">{t.initials}</div>
                   <div>
                     <p className="font-sans font-500 text-sm text-ink">{t.name}</p>
                     <p className="font-sans text-xs text-ink-3">{t.biz}</p>
@@ -596,17 +542,12 @@ export default function HomePage() {
       </section>
 
       {/* ── FAQ ── */}
-      <section className="py-24 px-6 bg-cream border-b border-border">
+      <section className="py-24 px-6 bg-white border-b border-border">
         <div className="max-w-3xl mx-auto">
           <p className="text-2xs font-sans font-500 tracking-[0.14em] uppercase text-gold mb-3">FAQ</p>
-          <h2 className="font-serif text-5xl text-ink mb-12">
-            Your questions,<br />
-            <em className="text-gold not-italic">answered.</em>
-          </h2>
-          <div className="border border-border rounded-xl overflow-hidden bg-white divide-y divide-border">
-            {faqs.map((f, i) => (
-              <FaqItem key={i} q={f.q} a={f.a} />
-            ))}
+          <h2 className="font-serif text-5xl text-ink mb-12">Your questions,<br /><em className="text-gold not-italic">answered.</em></h2>
+          <div className="border border-border rounded-xl overflow-hidden bg-cream divide-y divide-border">
+            {faqs.map((f, i) => <FaqItem key={i} q={f.q} a={f.a} />)}
           </div>
         </div>
       </section>
@@ -614,21 +555,19 @@ export default function HomePage() {
       {/* ── FINAL CTA ── */}
       <section className="py-28 px-6 bg-ink">
         <div className="max-w-2xl mx-auto text-center">
-          <div className="w-16 h-16 bg-gold rounded-2xl flex items-center justify-center font-serif text-3xl font-600 text-ink mx-auto mb-8">
-            L
-          </div>
+          <div className="w-16 h-16 bg-gold rounded-2xl flex items-center justify-center font-serif text-3xl font-600 text-ink mx-auto mb-8">L</div>
           <h2 className="font-serif text-6xl text-white mb-5">
             Your next caller<br />
             <em className="text-gold not-italic">deserves an answer.</em>
           </h2>
           <p className="text-sm font-sans text-[#666660] mb-10 leading-relaxed">
-            13 free minutes. No credit card. Five minutes to set up.<br />
+            $2.50 gets you a local number and 13 free minutes.<br />
             Your customers will never reach voicemail again.
           </p>
           <div className="flex gap-3 justify-center flex-wrap">
             <Link href="/signup">
               <Button variant="gold" size="lg">
-                Start free — 13 min trial
+                Get started for $2.50
                 <ArrowRight size={15} className="ml-2" />
               </Button>
             </Link>
@@ -636,7 +575,7 @@ export default function HomePage() {
               <Button variant="secondary" size="lg">Hear a demo</Button>
             </Link>
           </div>
-          <p className="text-xs font-sans text-[#333330] mt-5">No credit card · Cancel any time · Setup in 5 min</p>
+          <p className="text-xs font-sans text-[#333330] mt-5">$2.50 activation · No subscription until you're ready · Cancel any time</p>
         </div>
       </section>
 
@@ -647,23 +586,29 @@ export default function HomePage() {
             <div>
               <Logo variant="dark" size="sm" className="mb-4" />
               <p className="text-xs font-sans text-[#333330] leading-relaxed max-w-44">
-                AI receptionist for Canadian service businesses. Never miss a call, never lose a client.
+                AI receptionist for service businesses worldwide. Never miss a call, never lose a client.
               </p>
             </div>
             {[
               { title: "Product", links: ["How it works", "Features", "Pricing", "Integrations"] },
               { title: "Industries", links: ["Medical & dental", "Hair salons", "Real estate", "Contractors"] },
-              { title: "Company", links: ["About", "Blog", "Contact", "Privacy policy"] },
+              {
+                title: "Company", links: [
+                  { label: "About", href: "#" },
+                  { label: "Blog", href: "#" },
+                  { label: "Contact", href: "#" },
+                  { label: "Privacy Policy", href: "/privacy" },
+                  { label: "Terms of Service", href: "/terms" },
+                ]
+              },
             ].map(col => (
               <div key={col.title}>
-                <h5 className="text-2xs font-sans font-500 tracking-[0.12em] uppercase text-[#333330] mb-4">
-                  {col.title}
-                </h5>
+                <h5 className="text-2xs font-sans font-500 tracking-[0.12em] uppercase text-[#333330] mb-4">{col.title}</h5>
                 <ul className="space-y-2.5">
-                  {col.links.map(l => (
-                    <li key={l}>
-                      <a href="#" className="text-xs font-sans text-[#2A2A26] hover:text-[#444440] transition-colors">
-                        {l}
+                  {col.links.map((l: any) => (
+                    <li key={typeof l === "string" ? l : l.label}>
+                      <a href={typeof l === "string" ? "#" : l.href} className="text-xs font-sans text-[#2A2A26] hover:text-[#444440] transition-colors">
+                        {typeof l === "string" ? l : l.label}
                       </a>
                     </li>
                   ))}

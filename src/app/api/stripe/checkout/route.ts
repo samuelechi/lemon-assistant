@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-        const { plan } = await req.json()
+        const { plan, country } = await req.json()
 
         const priceId = plan === "pro"
             ? process.env.STRIPE_PRO_PRICE_ID!
@@ -24,7 +24,6 @@ export async function POST(req: NextRequest) {
 
         if (!business) return NextResponse.json({ error: "Business not found" }, { status: 404 })
 
-        // Check if customer already exists
         const { data: sub } = await supabase
             .from("subscriptions")
             .select("stripe_customer_id")
@@ -49,7 +48,12 @@ export async function POST(req: NextRequest) {
             mode: "subscription",
             success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?billing=success`,
             cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?billing=cancelled`,
-            metadata: { userId: user.id, businessId: business.id, plan },
+            metadata: {
+                userId: user.id,
+                businessId: business.id,
+                plan,
+                country: country || "US",
+            },
         })
 
         return NextResponse.json({ url: session.url })

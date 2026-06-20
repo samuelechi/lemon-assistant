@@ -12,6 +12,26 @@ const supabase = createClient(
 const VAPI_API_KEY = process.env.VAPI_API_KEY!
 const VAPI_BASE = "https://api.vapi.ai"
 
+// Twilio country codes supported
+const COUNTRY_CODES: Record<string, string> = {
+    CA: "CA",
+    US: "US",
+    GB: "GB",
+    IE: "IE",
+    AU: "AU",
+    NZ: "NZ",
+}
+
+// Fallback numbers per country if local search fails
+const COUNTRY_FALLBACK_CITY: Record<string, string> = {
+    CA: "416", // Toronto
+    US: "212", // New York
+    GB: "",    // UK uses no area code in Twilio search
+    IE: "",
+    AU: "",
+    NZ: "",
+}
+
 async function patchVapiAssistant(userId: string, maxDurationSeconds: number) {
     try {
         const { data: business } = await supabase
@@ -37,9 +57,11 @@ async function patchVapiAssistant(userId: string, maxDurationSeconds: number) {
     }
 }
 
-async function provisionPhoneNumber(userId: string, areaCode: string) {
+async function provisionPhoneNumber(userId: string, country: string) {
     const accountSid = process.env.TWILIO_ACCOUNT_SID!
     const authToken = process.env.TWILIO_AUTH_TOKEN!
+    const countryCode = COUNTRY_CODES[country] || "US"
+    const authHeader = `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`
 
     try {
         const { data: business } = await supabase
@@ -53,45 +75,47 @@ async function provisionPhoneNumber(userId: string, areaCode: string) {
             return
         }
 
-        // Skip if already has a number
         if (business.phone_number) {
             console.log("Business already has a phone number, skipping provisioning")
             return
         }
 
-        // Search for available Canadian number
-        const searchRes = await fetch(
-            `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/AvailablePhoneNumbers/CA/Local.json?AreaCode=${areaCode}&SmsEnabled=true&VoiceEnabled=true&Limit=1`,
-            { headers: { Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}` } }
-        )
+        // Search for available local number in the country
+        const searchUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/AvailablePhoneNumbers/${countryCode}/Local.json?SmsEnabled=true&VoiceEnabled=true&Limit=1`
+        const searchRes = await fetch(searchUrl, { headers: { Authorization: authHeader } })
 
         if (!searchRes.ok) throw new Error(`Twilio search failed: ${await searchRes.text()}`)
 
         const searchData = await searchRes.json()
         let numberToBuy = searchData.available_phone_numbers?.[0]?.phone_number
 
-        // Fallback to 416 if no numbers in requested area code
-        if (!numberToBuy) {
-            console.log(`No numbers for area code ${areaCode}, falling back to 416`)
-            const fallbackRes = await fetch(
-                `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/AvailablePhoneNumbers/CA/Local.json?AreaCode=416&SmsEnabled=true&VoiceEnabled=true&Limit=1`,
-                { headers: { Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}` } }
-            )
+        // Fallback: try with a major city area code for CA/US
+        if (!numberToBuy && COUNTRY_FALLBACK_CITY[countryCode]) {
+            const fallbackUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/AvailablePhoneNumbers/${countryCode}/Local.json?AreaCode=${COUNTRY_FALLBACK_CITY[countryCode]}&SmsEnabled=true&VoiceEnabled=true&Limit=1`
+            const fallbackRes = await fetch(fallbackUrl, { headers: { Authorization: authHeader } })
             const fallbackData = await fallbackRes.json()
             numberToBuy = fallbackData.available_phone_numbers?.[0]?.phone_number
         }
 
-        if (!numberToBuy) throw new Error("No Canadian numbers available")
+        // Last resort: try US
+        if (!numberToBuy) {
+            console.log(`No numbers for ${countryCode}, falling back to US`)
+            const usRes = await fetch(
+                `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/AvailablePhoneNumbers/US/Local.json?SmsEnabled=true&VoiceEnabled=true&Limit=1`,
+                { headers: { Authorization: authHeader } }
+            )
+            const usData = await usRes.json()
+            numberToBuy = usData.available_phone_numbers?.[0]?.phone_number
+        }
+
+        if (!numberToBuy) throw new Error("No phone numbers available in any region")
 
         // Purchase the number
         const buyRes = await fetch(
             `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/IncomingPhoneNumbers.json`,
             {
                 method: "POST",
-                headers: {
-                    Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`,
-                    "Content-Type": "application/x-www-form-urlencoded",
-                },
+                headers: { Authorization: authHeader, "Content-Type": "application/x-www-form-urlencoded" },
                 body: new URLSearchParams({ PhoneNumber: numberToBuy }).toString(),
             }
         )
@@ -121,13 +145,12 @@ async function provisionPhoneNumber(userId: string, areaCode: string) {
         if (!importRes.ok) throw new Error(`Vapi import failed: ${await importRes.text()}`)
         const vapiPhone = await importRes.json()
 
-        // Save to business
         await supabase.from("businesses").update({
             phone_number: buyData.phone_number,
             vapi_phone_id: vapiPhone.id,
         }).eq("user_id", userId)
 
-        console.log(`Provisioned number ${buyData.phone_number} for user ${userId}`)
+        console.log(`Provisioned ${buyData.phone_number} (${countryCode}) for user ${userId}`)
     } catch (err) {
         console.error("Phone provisioning failed:", err)
     }
@@ -147,24 +170,21 @@ export async function POST(req: NextRequest) {
 
     try {
         switch (event.type) {
-
-            // $2.50 trial activation — provision phone number
             case "checkout.session.completed": {
                 const session = event.data.object as Stripe.Checkout.Session
                 const userId = session.metadata?.userId
                 const businessId = session.metadata?.businessId
-                const areaCode = session.metadata?.areaCode || "416"
+                const country = session.metadata?.country || "US"
                 const type = session.metadata?.type
 
                 if (!userId || !businessId) break
 
                 if (type === "trial_activation") {
-                    // One-time payment — just provision the number
-                    await provisionPhoneNumber(userId, areaCode)
+                    await provisionPhoneNumber(userId, country)
                     break
                 }
 
-                // Subscription upgrade checkout
+                // Subscription upgrade
                 const plan = session.metadata?.plan
                 const subscription = await stripe.subscriptions.retrieve(session.subscription as string)
 
@@ -179,9 +199,7 @@ export async function POST(req: NextRequest) {
                 }, { onConflict: "user_id" })
 
                 await patchVapiAssistant(userId, 600)
-
-                // Provision number on upgrade if they didn't do trial activation
-                await provisionPhoneNumber(userId, areaCode)
+                await provisionPhoneNumber(userId, country)
                 break
             }
 

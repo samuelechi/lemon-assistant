@@ -310,13 +310,13 @@ export default function DashboardPage() {
     }
 
     const handleUpgrade = async (plan: "growth" | "pro", areaCode: string) => {
-        if (!areaCode) { setCalendarStatus("Please select your province first."); return }
+        if (!areaCode) { setCalendarStatus("Please select your country first."); return }
         setBillingLoading(true)
         try {
             const res = await fetch("/api/stripe/checkout", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ plan, areaCode }),
+                body: JSON.stringify({ plan, country: areaCode }),
             })
             const data = await res.json()
             if (data.url) window.location.href = data.url
@@ -477,16 +477,13 @@ export default function DashboardPage() {
     })
     const maxCalls = Math.max(...weekData.map(d => d.calls), 1)
 
-    const PROVINCE_OPTIONS = [
-        { label: "Alberta (403)", value: "403" },
-        { label: "British Columbia (604)", value: "604" },
-        { label: "Manitoba (204)", value: "204" },
-        { label: "New Brunswick (506)", value: "506" },
-        { label: "Newfoundland (709)", value: "709" },
-        { label: "Nova Scotia / PEI (902)", value: "902" },
-        { label: "Ontario (416)", value: "416" },
-        { label: "Quebec (514)", value: "514" },
-        { label: "Saskatchewan (306)", value: "306" },
+    const COUNTRY_OPTIONS = [
+        { label: "🇨🇦 Canada", value: "CA" },
+        { label: "🇺🇸 United States", value: "US" },
+        { label: "🇬🇧 United Kingdom", value: "GB" },
+        { label: "🇮🇪 Ireland", value: "IE" },
+        { label: "🇦🇺 Australia", value: "AU" },
+        { label: "🇳🇿 New Zealand", value: "NZ" },
     ]
 
     return (
@@ -1189,16 +1186,16 @@ export default function DashboardPage() {
 
                                     <div className="mb-5">
                                         <label className="block text-2xs font-sans font-500 text-ink-3 mb-2 tracking-[0.1em] uppercase">
-                                            Your province <span className="text-red-400">*</span>
+                                            Your country <span className="text-red-400">*</span>
                                         </label>
                                         <select value={upgradeProvince} onChange={e => setUpgradeProvince(e.target.value)}
                                             className={`w-full px-4 py-2.5 text-sm font-sans border rounded-lg focus:outline-none focus:border-gold transition-colors ${isDark ? "bg-[#0F0F0D] border-[#2A2A26] text-[#F0EFE8]" : "bg-white border-border text-ink"}`}>
-                                            <option value="">Select your province</option>
-                                            {PROVINCE_OPTIONS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                                            <option value="">Select your country</option>
+                                            {COUNTRY_OPTIONS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
                                         </select>
                                         {upgradeProvince && (
                                             <p className="text-2xs text-ink-3 font-sans mt-1.5">
-                                                You&apos;ll get a local <strong className="text-gold">{upgradeProvince}</strong> area code number.
+                                                You&apos;ll get a local <strong className="text-gold">{upgradeProvince}</strong> local number.
                                             </p>
                                         )}
                                     </div>
@@ -1209,13 +1206,13 @@ export default function DashboardPage() {
 
                                     <Button variant="gold" size="sm" className="w-full" disabled={billingLoading || !upgradeProvince}
                                         onClick={async () => {
-                                            if (!upgradeProvince) { setCalendarStatus("Please select your province first."); return }
+                                            if (!upgradeProvince) { setCalendarStatus("Please select your country first."); return }
                                             setBillingLoading(true)
                                             try {
                                                 const res = await fetch("/api/stripe/activate", {
                                                     method: "POST",
                                                     headers: { "Content-Type": "application/json" },
-                                                    body: JSON.stringify({ areaCode: upgradeProvince }),
+                                                    body: JSON.stringify({ country: upgradeProvince }),
                                                 })
                                                 const data = await res.json()
                                                 if (data.url) window.location.href = data.url
@@ -1243,16 +1240,16 @@ export default function DashboardPage() {
                                     {business?.phone_number && (
                                         <div className="mb-6">
                                             <label className="block text-2xs font-sans font-500 text-ink-3 mb-2 tracking-[0.1em] uppercase">
-                                                Your province <span className="text-red-400">*</span>
+                                                Your country <span className="text-red-400">*</span>
                                             </label>
                                             <select value={upgradeProvince} onChange={e => setUpgradeProvince(e.target.value)}
                                                 className={`w-full px-4 py-2.5 text-sm font-sans border rounded-lg focus:outline-none focus:border-gold transition-colors ${isDark ? "bg-[#0F0F0D] border-[#2A2A26] text-[#F0EFE8]" : "bg-white border-border text-ink"}`}>
-                                                <option value="">Select province for your phone number</option>
-                                                {PROVINCE_OPTIONS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                                                <option value="">Select your country</option>
+                                                {COUNTRY_OPTIONS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
                                             </select>
                                             {upgradeProvince && (
                                                 <p className="text-2xs text-ink-3 font-sans mt-1.5">
-                                                    You&apos;ll get a local <strong className="text-gold">{upgradeProvince}</strong> area code number after upgrading.
+                                                    You&apos;ll get a local <strong className="text-gold">{upgradeProvince}</strong> local number after upgrading.
                                                 </p>
                                             )}
                                         </div>
