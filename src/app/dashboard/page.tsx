@@ -1031,25 +1031,27 @@ export default function DashboardPage() {
                                 <p className="text-xs font-sans text-ink-3 mb-6">Set when your AI can book appointments.</p>
                                 <div className="space-y-3">
                                     {availability.map((a, i) => (
-                                        <div key={a.day} className={`flex items-center gap-3 p-4 rounded-lg border ${isDark ? "border-[#2A2A26]" : "border-border"}`}>
-                                            <div className="w-24 flex-shrink-0">
+                                        <div key={a.day} className={`p-4 rounded-lg border ${isDark ? "border-[#2A2A26]" : "border-border"}`}>
+                                            <div className="flex items-center justify-between mb-3">
                                                 <p className={`text-xs font-sans font-500 ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>{a.day}</p>
+                                                <button
+                                                    onClick={() => setAvailability(prev => prev.map((d, j) => j === i ? { ...d, active: !d.active } : d))}
+                                                    className={`flex-shrink-0 w-10 h-5 rounded-full transition-colors ${a.active ? "bg-gold" : isDark ? "bg-[#2A2A26]" : "bg-cream-2"}`}
+                                                >
+                                                    <div className={`w-4 h-4 bg-white rounded-full shadow transition-transform mx-0.5 ${a.active ? "translate-x-5" : "translate-x-0"}`} />
+                                                </button>
                                             </div>
-                                            <input type="time" value={a.start}
-                                                onChange={e => setAvailability(prev => prev.map((d, j) => j === i ? { ...d, start: e.target.value } : d))}
-                                                disabled={!a.active}
-                                                className={`px-3 py-1.5 text-xs font-sans border rounded-lg focus:outline-none focus:border-gold transition-colors disabled:opacity-40 ${isDark ? "bg-[#0F0F0D] border-[#2A2A26] text-[#F0EFE8]" : "bg-white border-border text-ink"}`} />
-                                            <span className="text-ink-3 text-xs">→</span>
-                                            <input type="time" value={a.end}
-                                                onChange={e => setAvailability(prev => prev.map((d, j) => j === i ? { ...d, end: e.target.value } : d))}
-                                                disabled={!a.active}
-                                                className={`px-3 py-1.5 text-xs font-sans border rounded-lg focus:outline-none focus:border-gold transition-colors disabled:opacity-40 ${isDark ? "bg-[#0F0F0D] border-[#2A2A26] text-[#F0EFE8]" : "bg-white border-border text-ink"}`} />
-                                            <button
-                                                onClick={() => setAvailability(prev => prev.map((d, j) => j === i ? { ...d, active: !d.active } : d))}
-                                                className={`ml-auto flex-shrink-0 w-10 h-5 rounded-full transition-colors ${a.active ? "bg-gold" : isDark ? "bg-[#2A2A26]" : "bg-cream-2"}`}
-                                            >
-                                                <div className={`w-4 h-4 bg-white rounded-full shadow transition-transform mx-0.5 ${a.active ? "translate-x-5" : "translate-x-0"}`} />
-                                            </button>
+                                            <div className="flex items-center gap-2">
+                                                <input type="time" value={a.start}
+                                                    onChange={e => setAvailability(prev => prev.map((d, j) => j === i ? { ...d, start: e.target.value } : d))}
+                                                    disabled={!a.active}
+                                                    className={`flex-1 min-w-0 px-3 py-1.5 text-xs font-sans border rounded-lg focus:outline-none focus:border-gold transition-colors disabled:opacity-40 ${isDark ? "bg-[#0F0F0D] border-[#2A2A26] text-[#F0EFE8]" : "bg-white border-border text-ink"}`} />
+                                                <span className="text-ink-3 text-xs flex-shrink-0">→</span>
+                                                <input type="time" value={a.end}
+                                                    onChange={e => setAvailability(prev => prev.map((d, j) => j === i ? { ...d, end: e.target.value } : d))}
+                                                    disabled={!a.active}
+                                                    className={`flex-1 min-w-0 px-3 py-1.5 text-xs font-sans border rounded-lg focus:outline-none focus:border-gold transition-colors disabled:opacity-40 ${isDark ? "bg-[#0F0F0D] border-[#2A2A26] text-[#F0EFE8]" : "bg-white border-border text-ink"}`} />
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
