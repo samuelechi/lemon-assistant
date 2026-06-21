@@ -266,14 +266,17 @@ function extractReason(summary: string): string {
 }
 
 function detectUrgency(transcript: string, summary: string): boolean {
-    const text = `${transcript} ${summary}`.toLowerCase()
-    const urgentWords = [
-        "urgent", "emergency", "immediately", "asap", "right away",
-        "chest pain", "can't breathe", "severe", "accident", "help"
-    ]
-    return urgentWords.some(w => text.includes(w))
+    if (!transcript) return false
+    const callerLines = transcript
+        .split("\n")
+        .filter(l => !l.toLowerCase().startsWith("ai:") &&
+            !l.toLowerCase().startsWith("lisa:") &&
+            !l.toLowerCase().startsWith("assistant:"))
+        .join(" ")
+        .toLowerCase()
+    const urgentWords = ["urgent", "emergency", "immediately", "asap", "chest pain", "can't breathe", "severe pain", "accident", "help me"]
+    return urgentWords.some(w => callerLines.includes(w))
 }
-
 function detectBooking(summary: string): boolean {
     if (!summary) return false
     const text = summary.toLowerCase()
