@@ -1,6 +1,8 @@
 const VAPI_API_KEY = process.env.VAPI_API_KEY!
 const VAPI_BASE = "https://api.vapi.ai"
 
+export const DEFAULT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM" // Rachel — fallback for all plans
+
 export type AssistantConfig = {
   businessName: string
   aiName: string
@@ -13,6 +15,7 @@ export type AssistantConfig = {
   about?: string
   businessId?: string
   appUrl?: string
+  voiceId?: string // Pro only — ElevenLabs voice ID
 }
 
 function buildSystemPrompt({
@@ -106,8 +109,15 @@ function buildTools(businessId?: string, appUrl?: string) {
   ] : []
 }
 
+function buildVoice(voiceId?: string) {
+  return {
+    provider: "11labs",
+    voiceId: voiceId || DEFAULT_VOICE_ID,
+  }
+}
+
 export async function createVapiAssistant(config: AssistantConfig) {
-  const { businessName, aiName, businessId, appUrl } = config
+  const { businessName, aiName, businessId, appUrl, voiceId } = config
   const systemPrompt = buildSystemPrompt(config)
   const tools = buildTools(businessId, appUrl)
 
@@ -127,10 +137,7 @@ export async function createVapiAssistant(config: AssistantConfig) {
         systemPrompt,
         tools,
       },
-      voice: {
-        provider: "11labs",
-        voiceId: "21m00Tcm4TlvDq8ikWAM",
-      },
+      voice: buildVoice(voiceId),
       endCallMessage: "Thank you for calling. Have a wonderful day!",
       recordingEnabled: true,
       transcriber: {
@@ -177,12 +184,8 @@ export async function createVapiPhoneNumber(assistantId: string, appUrl?: string
   return data
 }
 
-// PATCHes the existing assistant in place — rebuilds the system prompt, tools,
-// greeting and name from the current business config. This does NOT touch the
-// phone number, so it's the safe way to push prompt changes to a live assistant
-// (unlike recreate, which provisions a new number).
 export async function updateVapiAssistant(assistantId: string, config: AssistantConfig) {
-  const { businessName, aiName, businessId, appUrl } = config
+  const { businessName, aiName, businessId, appUrl, voiceId } = config
   const systemPrompt = buildSystemPrompt(config)
   const tools = buildTools(businessId, appUrl)
 
@@ -201,6 +204,7 @@ export async function updateVapiAssistant(assistantId: string, config: Assistant
         systemPrompt,
         tools,
       },
+      voice: buildVoice(voiceId),
     }),
   })
 
