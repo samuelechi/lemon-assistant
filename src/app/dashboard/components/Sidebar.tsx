@@ -1,9 +1,12 @@
 "use client"
+import { useState } from "react"
 import {
     LayoutDashboard, Phone, Calendar, BarChart3,
-    Settings, CreditCard, Sun, Moon, LogOut, X, AlertTriangle
+    Settings, CreditCard, Sun, Moon, LogOut, X,
+    MessageCircle, Send, ChevronDown
 } from "lucide-react"
 import { Logo } from "@/components/ui/Logo"
+import { Button } from "@/components/ui/button"
 
 const NAV_ITEMS = [
     { id: "overview", label: "Overview", icon: <LayoutDashboard size={16} /> },
@@ -26,6 +29,99 @@ type SidebarProps = {
     onClose: () => void
     onToggleTheme: () => void
     onLogout: () => void
+}
+
+function SupportDropdown({ isDark }: { isDark: boolean }) {
+    const [open, setOpen] = useState(false)
+    const [name, setName] = useState("")
+    const [email, setEmail] = useState("")
+    const [message, setMessage] = useState("")
+    const [sending, setSending] = useState(false)
+    const [sent, setSent] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+
+    const inputCls = `w-full px-3 py-2 text-xs font-sans border rounded-lg focus:outline-none focus:border-gold transition-colors ${isDark
+        ? "bg-[#0F0F0D] border-[#2A2A26] text-[#F0EFE8] placeholder:text-[#444440]"
+        : "bg-cream border-border text-ink placeholder:text-ink-3"}`
+
+    async function handleSubmit() {
+        if (!name.trim() || !email.trim() || !message.trim()) {
+            setError("Please fill in all fields.")
+            return
+        }
+        setSending(true)
+        setError(null)
+        try {
+            const res = await fetch("/api/support", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name, email, message }),
+            })
+            const data = await res.json()
+            if (res.ok) {
+                setSent(true)
+                setTimeout(() => { setSent(false); setOpen(false); setName(""); setEmail(""); setMessage("") }, 2500)
+            } else {
+                setError(data.error || "Failed to send.")
+            }
+        } catch {
+            setError("Something went wrong.")
+        }
+        setSending(false)
+    }
+
+    return (
+        <div className="relative">
+            <button
+                onClick={() => setOpen(p => !p)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-sans transition-all duration-150 ${isDark
+                    ? "text-[#6A6A62] hover:bg-[#1A1A16] hover:text-[#F0EFE8]"
+                    : "text-ink-3 hover:bg-cream hover:text-ink"}`}
+            >
+                <MessageCircle size={16} />
+                Support
+                <ChevronDown size={13} className={`ml-auto transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+            </button>
+
+            {open && (
+                <div className={`mt-1 mx-1 rounded-xl border p-4 ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border shadow-sm"}`}>
+                    {sent ? (
+                        <div className="text-center py-3">
+                            <p className="text-xs font-sans font-500 text-green-500 mb-0.5">Message sent ✓</p>
+                            <p className="text-2xs font-sans text-ink-3">We'll get back to you within 24h.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-2.5">
+                            <p className={`text-2xs font-sans font-500 uppercase tracking-wider mb-3 ${isDark ? "text-[#4A4A42]" : "text-ink-3"}`}>
+                                Contact support
+                            </p>
+                            <input
+                                type="text" placeholder="Your name" value={name}
+                                onChange={e => setName(e.target.value)} className={inputCls}
+                            />
+                            <input
+                                type="email" placeholder="Email address" value={email}
+                                onChange={e => setEmail(e.target.value)} className={inputCls}
+                            />
+                            <textarea
+                                rows={3} placeholder="Describe your issue..."
+                                value={message} onChange={e => setMessage(e.target.value)}
+                                className={`${inputCls} resize-none leading-relaxed`}
+                            />
+                            {error && <p className="text-2xs font-sans text-red-500">{error}</p>}
+                            <button
+                                onClick={handleSubmit} disabled={sending}
+                                className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-gold to-[#A07E00] text-white text-xs font-sans font-500 rounded-lg shadow-[var(--shadow-gold)] hover:brightness-105 transition-all disabled:opacity-60"
+                            >
+                                <Send size={12} />
+                                {sending ? "Sending..." : "Send message"}
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    )
 }
 
 export function Sidebar({
@@ -84,6 +180,8 @@ export function Sidebar({
             </nav>
 
             <div className={`px-3 py-4 border-t space-y-1 ${isDark ? "border-[#1A1A16]" : "border-border"}`}>
+                <SupportDropdown isDark={isDark} />
+
                 {mounted && (
                     <button
                         onClick={onToggleTheme}
@@ -93,6 +191,7 @@ export function Sidebar({
                         {isDark ? "Light mode" : "Dark mode"}
                     </button>
                 )}
+
                 <button
                     onClick={onLogout}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-sans transition-all duration-150 ${isDark ? "text-[#6A6A62] hover:bg-[#1A1A16] hover:text-red-400" : "text-ink-3 hover:bg-cream hover:text-red-500"}`}
