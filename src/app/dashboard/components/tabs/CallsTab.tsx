@@ -17,15 +17,18 @@ export function CallsTab({ isDark, calls, callFilter, onFilterChange }: Props) {
         <div className="space-y-4 animate-[fadeIn_0.3s_ease]">
             <div className="flex items-center justify-between flex-wrap gap-3">
                 <p className="text-sm font-sans text-ink-3">{calls.length} total call{calls.length !== 1 ? "s" : ""}</p>
-                <div className="flex gap-2 flex-wrap">
+                <div className={`flex gap-1 p-1 rounded-lg ${isDark ? "bg-[#1A1A16]" : "bg-cream-2"}`}>
                     {["All", "Booked", "Urgent", "Missed"].map(f => (
                         <button key={f} onClick={() => onFilterChange(f)}
-                            className={`px-3 py-1.5 text-xs font-sans rounded-lg border transition-all ${callFilter === f ? "bg-gradient-to-r from-gold to-[#A07E00] text-white border-transparent shadow-[var(--shadow-gold)]" : "border-border text-ink-3 hover:border-gold hover:text-gold"}`}>
+                            className={`px-3 py-1.5 text-xs font-sans rounded-md transition-all ${callFilter === f
+                                ? "bg-gradient-to-r from-gold to-[#A07E00] text-white shadow-[var(--shadow-gold)]"
+                                : isDark ? "text-[#6A6A62] hover:text-[#F0EFE8]" : "text-ink-3 hover:text-ink"}`}>
                             {f}
                         </button>
                     ))}
                 </div>
             </div>
+
             {filtered.length === 0 ? (
                 <div className={`rounded-xl border shadow-[var(--shadow-card)] ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`}>
                     <EmptyState isDark={isDark} icon={<PhoneOff size={20} />} title="No calls found" sub="Calls will appear here after your AI answers them." />

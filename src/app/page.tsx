@@ -210,9 +210,12 @@ export default function HomePage() {
                     <ArrowRight size={15} className="ml-2" />
                   </Button>
                 </Link>
-                <Link href="#demo">
-                  <Button variant="secondary" size="lg">Hear a demo call</Button>
-                </Link>
+                <a href="tel:+16513093510" className="group relative">
+                  <Button variant="secondary" size="lg">
+                    <span className="group-hover:hidden">Hear a demo call</span>
+                    <span className="hidden group-hover:inline">Call +1 (651) 309-3510</span>
+                  </Button>
+                </a>
               </div>
 
               <div className="flex items-center gap-3 text-xs text-ink-3 font-sans">
