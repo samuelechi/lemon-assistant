@@ -17,7 +17,10 @@ type Business = {
     id: string; name: string; ai_name: string; type: string
     phone_number: string | null; vapi_assistant_id: string | null
     hours_start: string; hours_end: string; calendar_type: string
-    about?: string; notification_phone?: string; voice_id?: string | null
+    about?: string; notification_phone?: string
+    voice_id?: string | null
+    language?: string | null
+    review_url?: string | null
 }
 type Call = { id: string; caller_name: string; caller_number: string; reason: string; status: string; urgent: boolean; duration_seconds: number; appointment_booked: boolean; summary: string; transcript: string; created_at: string }
 type Appointment = { id: string; caller_name: string; caller_phone: string; type: string; date: string; time: string; status: string; created_at: string }
@@ -48,6 +51,7 @@ export default function DashboardPage() {
     const [billingLoading, setBillingLoading] = useState(false)
     const [upgradeProvince, setUpgradeProvince] = useState("")
     const [isPro, setIsPro] = useState(false)
+    const [userEmail, setUserEmail] = useState<string | null>(null)
     const [settingsForm, setSettingsForm] = useState({
         aiName: "", aiGreeting: "", businessName: "", businessType: "",
         about: "", hoursStart: "09:00", hoursEnd: "17:00", notificationPhone: "",
@@ -63,7 +67,6 @@ export default function DashboardPage() {
 
     useEffect(() => { setMounted(true) }, [])
 
-    // Listen for nav events from child components (e.g. VoicePicker upgrade CTA)
     useEffect(() => {
         const handler = (e: Event) => setActive((e as CustomEvent).detail)
         window.addEventListener("lemon:nav", handler)
@@ -87,9 +90,11 @@ export default function DashboardPage() {
                 const { data: { user } } = await supabase.auth.getUser()
                 if (!user) { router.push("/login"); return }
 
+                setUserEmail(user.email ?? null)
+
                 const { data: biz } = await supabase
                     .from("businesses")
-                    .select("id, name, ai_name, type, phone_number, vapi_assistant_id, hours_start, hours_end, calendar_type, about, notification_phone, voice_id")
+                    .select("id, name, ai_name, type, phone_number, vapi_assistant_id, hours_start, hours_end, calendar_type, about, notification_phone, voice_id, language, review_url")
                     .eq("user_id", user.id)
                     .maybeSingle()
                 if (!biz) { router.push("/onboarding"); return }
@@ -190,17 +195,48 @@ export default function DashboardPage() {
     const saveSettings = async (section: string) => {
         setSaving(true)
         try {
-            const res = await fetch("/api/business/update", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ai_name: settingsForm.aiName, ai_greeting: settingsForm.aiGreeting, name: settingsForm.businessName, type: settingsForm.businessType, about: settingsForm.about, hours_start: settingsForm.hoursStart, hours_end: settingsForm.hoursEnd, notification_phone: settingsForm.notificationPhone }) })
-            if (res.ok) { setBusiness(prev => prev ? { ...prev, name: settingsForm.businessName, ai_name: settingsForm.aiName } : prev); setToast(`${section} saved successfully!`) }
-            else setToast("Failed to save. Try again.")
+            const res = await fetch("/api/business/update", {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    ai_name: settingsForm.aiName, ai_greeting: settingsForm.aiGreeting,
+                    name: settingsForm.businessName, type: settingsForm.businessType,
+                    about: settingsForm.about, hours_start: settingsForm.hoursStart,
+                    hours_end: settingsForm.hoursEnd, notification_phone: settingsForm.notificationPhone,
+                }),
+            })
+            if (res.ok) {
+                setBusiness(prev => prev ? { ...prev, name: settingsForm.businessName, ai_name: settingsForm.aiName } : prev)
+                setToast(`${section} saved successfully!`)
+            } else setToast("Failed to save. Try again.")
         } catch { setToast("Failed to save. Try again.") }
         setSaving(false)
     }
 
     const saveVoice = async (voiceId: string) => {
-        const res = await fetch("/api/business/update", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ voice_id: voiceId }) })
+        const res = await fetch("/api/business/update", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ voice_id: voiceId }),
+        })
         if (res.ok) { setBusiness(prev => prev ? { ...prev, voice_id: voiceId } : prev); setToast("Voice saved!") }
         else { const d = await res.json(); setToast(d.error || "Failed to save voice.") }
+    }
+
+    const saveLanguage = async (language: string) => {
+        const res = await fetch("/api/business/update", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ language }),
+        })
+        if (res.ok) { setBusiness(prev => prev ? { ...prev, language } : prev); setToast("Language saved!") }
+        else { const d = await res.json(); setToast(d.error || "Failed to save language.") }
+    }
+
+    const saveReviewUrl = async (review_url: string) => {
+        const res = await fetch("/api/business/update", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ review_url }),
+        })
+        if (res.ok) { setBusiness(prev => prev ? { ...prev, review_url } : prev); setToast("Review link saved!") }
+        else { const d = await res.json(); setToast(d.error || "Failed to save review link.") }
     }
 
     const saveAvailability = async () => {
@@ -272,7 +308,9 @@ export default function DashboardPage() {
 
                 <main className="flex-1 px-4 md:px-8 py-6 md:py-8 overflow-auto" style={{ backgroundImage: "radial-gradient(1000px 560px at 100% -5%, rgba(196,154,0,0.06), transparent 60%)" }}>
                     {toast && (
-                        <div className={`mb-6 px-5 py-3 rounded-lg text-sm font-sans flex items-center justify-between ${toast.includes("success") || toast.includes("saved") || toast.includes("complete") || toast.includes("blocked") || toast.includes("Trial") || toast.includes("Voice")
+                        <div className={`mb-6 px-5 py-3 rounded-lg text-sm font-sans flex items-center justify-between ${toast.includes("success") || toast.includes("saved") || toast.includes("complete") ||
+                            toast.includes("blocked") || toast.includes("Trial") || toast.includes("Voice") ||
+                            toast.includes("Language") || toast.includes("Review") || toast.includes("Password")
                             ? "bg-green-50 text-green-700 border border-green-200"
                             : "bg-red-50 text-red-700 border border-red-200"}`}>
                             {toast}
@@ -285,7 +323,21 @@ export default function DashboardPage() {
                     {active === "appointments" && <AppointmentsTab isDark={isDark} appointments={appointments} />}
                     {active === "analytics" && <AnalyticsTab isDark={isDark} calls={calls} business={business} minutesUsed={minutesUsed} bookingRate={bookingRate} />}
                     {active === "calendar" && <CalendarTab isDark={isDark} business={business} saving={saving} availability={availability} blockDate={blockDate} blockReason={blockReason} blockedDates={blockedDates} onAvailabilityChange={setAvailability} onBlockDateChange={setBlockDate} onBlockReasonChange={setBlockReason} onSaveAvailability={saveAvailability} onBlockDate={blockDateFn} onRemoveBlockedDate={removeBlockedDate} onSwitchToBuiltin={switchToBuiltin} />}
-                    {active === "settings" && <SettingsTab isDark={isDark} saving={saving} isPro={isPro} form={settingsForm} currentVoiceId={business?.voice_id ?? null} onFormChange={updates => setSettingsForm(p => ({ ...p, ...updates }))} onSave={saveSettings} onSaveVoice={saveVoice} />}
+                    {active === "settings" && (
+                        <SettingsTab
+                            isDark={isDark} saving={saving} isPro={isPro}
+                            form={settingsForm}
+                            currentVoiceId={business?.voice_id ?? null}
+                            currentLanguage={business?.language ?? null}
+                            currentReviewUrl={business?.review_url ?? null}
+                            userEmail={userEmail}
+                            onFormChange={updates => setSettingsForm(p => ({ ...p, ...updates }))}
+                            onSave={saveSettings}
+                            onSaveVoice={saveVoice}
+                            onSaveLanguage={saveLanguage}
+                            onSaveReviewUrl={saveReviewUrl}
+                        />
+                    )}
                     {active === "billing" && <BillingTab isDark={isDark} business={business} subscription={subscription} minutesUsed={minutesUsed} billingLoading={billingLoading} upgradeProvince={upgradeProvince} onUpgradeProvinceChange={setUpgradeProvince} onUpgrade={handleUpgrade} onManageBilling={handleManageBilling} onActivate={handleActivate} onSetStatus={setToast} />}
                 </main>
             </div>

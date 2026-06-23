@@ -1,7 +1,7 @@
 const VAPI_API_KEY = process.env.VAPI_API_KEY!
 const VAPI_BASE = "https://api.vapi.ai"
 
-export const DEFAULT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM" // Rachel — fallback for all plans
+export const DEFAULT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM"
 
 export type AssistantConfig = {
   businessName: string
@@ -15,19 +15,54 @@ export type AssistantConfig = {
   about?: string
   businessId?: string
   appUrl?: string
-  voiceId?: string // Pro only — ElevenLabs voice ID
+  voiceId?: string    // Pro only
+  language?: string   // Pro only
+  reviewUrl?: string  // Pro only
 }
+
+export type SupportedLanguage = {
+  code: string
+  label: string
+  flag: string
+  greeting: string
+}
+
+export const SUPPORTED_LANGUAGES: SupportedLanguage[] = [
+  { code: "en", label: "English", flag: "🇺🇸", greeting: "English" },
+  { code: "fr", label: "French", flag: "🇫🇷", greeting: "French (Français)" },
+  { code: "es", label: "Spanish", flag: "🇪🇸", greeting: "Spanish (Español)" },
+  { code: "de", label: "German", flag: "🇩🇪", greeting: "German (Deutsch)" },
+  { code: "pt", label: "Portuguese", flag: "🇧🇷", greeting: "Portuguese (Português)" },
+  { code: "it", label: "Italian", flag: "🇮🇹", greeting: "Italian (Italiano)" },
+  { code: "nl", label: "Dutch", flag: "🇳🇱", greeting: "Dutch (Nederlands)" },
+  { code: "pl", label: "Polish", flag: "🇵🇱", greeting: "Polish (Polski)" },
+  { code: "hi", label: "Hindi", flag: "🇮🇳", greeting: "Hindi (हिन्दी)" },
+  { code: "ja", label: "Japanese", flag: "🇯🇵", greeting: "Japanese (日本語)" },
+  { code: "zh", label: "Chinese (Mandarin)", flag: "🇨🇳", greeting: "Mandarin Chinese (普通话)" },
+  { code: "ar", label: "Arabic", flag: "🇸🇦", greeting: "Arabic (العربية)" },
+]
+
+export const DEFAULT_LANGUAGE = "en"
 
 function buildSystemPrompt({
   businessName, aiName, businessType,
   hoursStart, hoursEnd, workingDays,
-  meetingTypes, meetingDuration, about,
+  meetingTypes, meetingDuration, about, language, reviewUrl,
 }: AssistantConfig): string {
+  const lang = SUPPORTED_LANGUAGES.find(l => l.code === language) ?? SUPPORTED_LANGUAGES[0]
+  const langInstruction = language && language !== "en"
+    ? `\n## Language\nConduct the entire conversation in ${lang.greeting}. Greet the caller in ${lang.greeting} and stay in that language throughout.\n`
+    : ""
+
+  const reviewInstruction = reviewUrl
+    ? `\n## Review request\nAfter successfully booking an appointment, before ending the call, ask the caller: "Would you like me to send you a link to leave us a review? It only takes a minute and really helps us." If they say yes, use the requestReview tool to send them the link. If they say no, thank them and end the call normally.\n`
+    : ""
+
   return `
 You are ${aiName}, a professional and friendly AI receptionist for ${businessName}${businessType ? `, a ${businessType}` : ""}.
 
 ${about ? `About this business: ${about}` : ""}
-
+${langInstruction}${reviewInstruction}
 ## Today's date
 The current date is {{"now" | date: "%A, %B %d, %Y"}} (raw timestamp: {{now}}). Treat this as today.
 When the caller mentions a day or date (e.g. "next Tuesday", "the 15th"), resolve it to an absolute
@@ -63,8 +98,10 @@ ${meetingTypes.join(", ")} — each ${meetingDuration} minutes long.
   `.trim()
 }
 
-function buildTools(businessId?: string, appUrl?: string) {
-  return businessId && appUrl ? [
+function buildTools(businessId?: string, appUrl?: string, reviewUrl?: string) {
+  if (!businessId || !appUrl) return []
+
+  const tools: object[] = [
     {
       type: "function",
       function: {
@@ -73,17 +110,12 @@ function buildTools(businessId?: string, appUrl?: string) {
         parameters: {
           type: "object",
           properties: {
-            date: {
-              type: "string",
-              description: "The date to check in YYYY-MM-DD format",
-            },
+            date: { type: "string", description: "The date to check in YYYY-MM-DD format" },
           },
           required: ["date"],
         },
       },
-      server: {
-        url: `${appUrl}/api/calendar/availability?businessId=${businessId}`,
-      },
+      server: { url: `${appUrl}/api/calendar/availability?businessId=${businessId}` },
     },
     {
       type: "function",
@@ -102,49 +134,56 @@ function buildTools(businessId?: string, appUrl?: string) {
           required: ["callerName", "date", "time"],
         },
       },
-      server: {
-        url: `${appUrl}/api/calendar/book?businessId=${businessId}`,
-      },
+      server: { url: `${appUrl}/api/calendar/book?businessId=${businessId}` },
     },
-  ] : []
+  ]
+
+  if (reviewUrl) {
+    tools.push({
+      type: "function",
+      function: {
+        name: "requestReview",
+        description: "Send the caller an SMS with a link to leave a review",
+        parameters: {
+          type: "object",
+          properties: {
+            callerPhone: { type: "string", description: "Phone number to send the review link to" },
+          },
+          required: ["callerPhone"],
+        },
+      },
+      server: { url: `${appUrl}/api/review/request?businessId=${businessId}` },
+    })
+  }
+
+  return tools
 }
 
 function buildVoice(voiceId?: string) {
-  return {
-    provider: "11labs",
-    voiceId: voiceId || DEFAULT_VOICE_ID,
-  }
+  return { provider: "11labs", voiceId: voiceId || DEFAULT_VOICE_ID }
+}
+
+function buildTranscriber(language?: string) {
+  return { provider: "deepgram", model: "nova-2", language: language || DEFAULT_LANGUAGE }
 }
 
 export async function createVapiAssistant(config: AssistantConfig) {
-  const { businessName, aiName, businessId, appUrl, voiceId } = config
+  const { businessName, aiName, businessId, appUrl, voiceId, language, reviewUrl } = config
   const systemPrompt = buildSystemPrompt(config)
-  const tools = buildTools(businessId, appUrl)
+  const tools = buildTools(businessId, appUrl, reviewUrl)
 
   const res = await fetch(`${VAPI_BASE}/assistant`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${VAPI_API_KEY}`,
-      "Content-Type": "application/json",
-    },
+    headers: { Authorization: `Bearer ${VAPI_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       name: `${businessName} — ${aiName}`,
       firstMessage: `Thank you for calling ${businessName}, this is ${aiName} speaking. How can I help you today?`,
       serverUrl: `${appUrl}/api/vapi/webhook`,
-      model: {
-        provider: "openai",
-        model: "gpt-4o-mini",
-        systemPrompt,
-        tools,
-      },
+      model: { provider: "openai", model: "gpt-4o-mini", systemPrompt, tools },
       voice: buildVoice(voiceId),
       endCallMessage: "Thank you for calling. Have a wonderful day!",
       recordingEnabled: true,
-      transcriber: {
-        provider: "deepgram",
-        model: "nova-2",
-        language: "en",
-      },
+      transcriber: buildTranscriber(language),
     }),
   })
 
@@ -163,10 +202,7 @@ export async function createVapiPhoneNumber(assistantId: string, appUrl?: string
 
   const res = await fetch(`${VAPI_BASE}/phone-number`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${VAPI_API_KEY}`,
-      "Content-Type": "application/json",
-    },
+    headers: { Authorization: `Bearer ${VAPI_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       provider: "vapi",
       assistantId,
@@ -185,26 +221,19 @@ export async function createVapiPhoneNumber(assistantId: string, appUrl?: string
 }
 
 export async function updateVapiAssistant(assistantId: string, config: AssistantConfig) {
-  const { businessName, aiName, businessId, appUrl, voiceId } = config
+  const { businessName, aiName, businessId, appUrl, voiceId, language, reviewUrl } = config
   const systemPrompt = buildSystemPrompt(config)
-  const tools = buildTools(businessId, appUrl)
+  const tools = buildTools(businessId, appUrl, reviewUrl)
 
   const res = await fetch(`${VAPI_BASE}/assistant/${assistantId}`, {
     method: "PATCH",
-    headers: {
-      Authorization: `Bearer ${VAPI_API_KEY}`,
-      "Content-Type": "application/json",
-    },
+    headers: { Authorization: `Bearer ${VAPI_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       name: `${businessName} — ${aiName}`,
       firstMessage: `Thank you for calling ${businessName}, this is ${aiName} speaking. How can I help you today?`,
-      model: {
-        provider: "openai",
-        model: "gpt-4o-mini",
-        systemPrompt,
-        tools,
-      },
+      model: { provider: "openai", model: "gpt-4o-mini", systemPrompt, tools },
       voice: buildVoice(voiceId),
+      transcriber: buildTranscriber(language),
     }),
   })
 

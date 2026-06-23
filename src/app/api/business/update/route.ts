@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
         const {
             ai_name, ai_greeting, name, type, about,
             hours_start, hours_end, notification_phone,
-            voice_id,
+            voice_id, language, review_url,
         } = body
 
         // Normalize notification number to E.164
@@ -31,8 +31,8 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        // If voice_id is being set, verify the user is on Pro
-        if (voice_id !== undefined) {
+        // Pro-gate voice_id, language, review_url
+        if (voice_id !== undefined || language !== undefined || review_url !== undefined) {
             const { data: sub } = await supabase
                 .from("subscriptions")
                 .select("plan, status")
@@ -41,21 +41,21 @@ export async function POST(req: NextRequest) {
 
             const isPro = sub?.status === "active" && sub?.plan === "pro"
             if (!isPro) {
-                return NextResponse.json({ error: "Custom voice is a Pro feature" }, { status: 403 })
+                return NextResponse.json({ error: "This feature requires a Pro plan" }, { status: 403 })
             }
         }
 
         const { data: business } = await supabase
             .from("businesses")
             .select(
-                "id, vapi_assistant_id, name, ai_name, type, about, hours_start, hours_end, working_days, meeting_types, meeting_duration, voice_id"
+                "id, vapi_assistant_id, name, ai_name, type, about, hours_start, hours_end, working_days, meeting_types, meeting_duration, voice_id, language, review_url"
             )
             .eq("user_id", user.id)
             .single()
 
         if (!business) return NextResponse.json({ error: "Business not found" }, { status: 404 })
 
-        // Build update payload for Supabase
+        // Build DB update payload
         const dbUpdate: Record<string, unknown> = {}
         if (ai_name !== undefined) dbUpdate.ai_name = ai_name
         if (ai_greeting !== undefined) dbUpdate.ai_greeting = ai_greeting
@@ -66,13 +66,13 @@ export async function POST(req: NextRequest) {
         if (hours_end !== undefined) dbUpdate.hours_end = hours_end
         if (normalizedPhone !== undefined) dbUpdate.notification_phone = normalizedPhone
         if (voice_id !== undefined) dbUpdate.voice_id = voice_id
+        if (language !== undefined) dbUpdate.language = language
+        if (review_url !== undefined) dbUpdate.review_url = review_url
 
         await supabase.from("businesses").update(dbUpdate).eq("id", business.id)
 
-        // Patch the Vapi assistant with the merged config
+        // Patch Vapi assistant with merged config
         if (business.vapi_assistant_id) {
-            const mergedVoiceId = voice_id !== undefined ? voice_id : business.voice_id
-
             await updateVapiAssistant(business.vapi_assistant_id, {
                 businessName: name ?? business.name,
                 aiName: ai_name ?? business.ai_name,
@@ -85,7 +85,9 @@ export async function POST(req: NextRequest) {
                 about: about ?? business.about,
                 businessId: business.id,
                 appUrl: process.env.NEXT_PUBLIC_APP_URL,
-                voiceId: mergedVoiceId ?? undefined,
+                voiceId: (voice_id ?? business.voice_id) ?? undefined,
+                language: (language ?? business.language) ?? undefined,
+                reviewUrl: (review_url ?? business.review_url) ?? undefined,
             })
         }
 
