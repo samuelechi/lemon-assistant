@@ -12,6 +12,7 @@ import { AnalyticsTab } from "./components/tabs/AnalyticsTab"
 import { CalendarTab } from "./components/tabs/CalendarTab"
 import { SettingsTab } from "./components/tabs/SettingsTab"
 import { BillingTab } from "./components/tabs/BillingTab"
+import { Logo } from "@/components/ui/Logo"
 
 type Business = {
     id: string; name: string; ai_name: string; type: string
@@ -282,11 +283,13 @@ export default function DashboardPage() {
     const bookingRate = calls.length > 0 ? Math.round((calls.filter(c => c.appointment_booked).length / calls.length) * 100) : 0
 
     if (loading) return (
-        <div className={`min-h-screen flex items-center justify-center ${isDark ? "bg-[#0F0F0D]" : "bg-cream"}`}>
-            <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+        <div className={`min-h-screen flex flex-col items-center justify-center gap-5 ${isDark ? "bg-[#0F0F0D]" : "bg-cream"}`}>
+            <div className="animate-[fadeIn_0.4s_ease]">
+                <Logo variant={isDark ? "dark" : "white"} size="md" />
+            </div>
+            <div className="w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin" />
         </div>
     )
-
     return (
         <div className={`min-h-screen flex ${isDark ? "dark bg-[#0F0F0D]" : "bg-cream"}`}>
             {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setSidebarOpen(false)} />}
