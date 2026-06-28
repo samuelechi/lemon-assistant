@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
             allow: "/",
             disallow: ["/dashboard", "/onboarding", "/api/"],
         },
-        sitemap: "https://lemon-assistant.vercel.app/sitemap.xml",
+        sitemap: "https://lemonassistantai.com/sitemap.xml",
     }
 }
