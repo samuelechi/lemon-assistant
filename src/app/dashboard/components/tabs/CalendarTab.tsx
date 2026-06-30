@@ -46,7 +46,6 @@ export function CalendarTab({
                             </div>
                         </div>
                     ))}
-
                 </div>
                 <Button variant="gold" size="sm" className="mt-6" disabled={saving} onClick={onSaveAvailability}>
                     {saving ? "Saving..." : "Save availability"}
@@ -83,7 +82,7 @@ export function CalendarTab({
                 <h3 className={`font-serif text-lg mb-1 ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>Calendar connection</h3>
                 <p className="text-xs font-sans text-ink-3 mb-5">Connect your calendar so appointments sync automatically.</p>
                 <div className="space-y-3">
-                    {/* Built-in calendar — always available */}
+                    {/* Built-in calendar */}
                     <div className={`flex items-center gap-4 px-5 py-4 rounded-xl border ${isDark ? "border-[#2A2A26]" : "border-border"}`}>
                         <span className="text-2xl">⚡</span>
                         <div className="flex-1">
@@ -97,17 +96,18 @@ export function CalendarTab({
                         </Button>
                     </div>
 
-                    {/* Google Calendar — coming soon */}
-                    <div className={`flex items-center gap-4 px-5 py-4 rounded-xl border opacity-60 ${isDark ? "border-[#2A2A26]" : "border-border"}`}>
+                    {/* Google Calendar — now live */}
+                    <div className={`flex items-center gap-4 px-5 py-4 rounded-xl border ${isDark ? "border-[#2A2A26]" : "border-border"}`}>
                         <span className="text-2xl">🗓️</span>
                         <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                                <p className={`text-sm font-sans font-500 ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>Google Calendar</p>
-                                <span className="text-2xs font-sans font-500 px-2 py-0.5 rounded-full bg-gold-pale text-gold-dark border border-gold-light">Coming soon</span>
-                            </div>
+                            <p className={`text-sm font-sans font-500 ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>Google Calendar</p>
                             <p className="text-2xs text-ink-3 font-sans mt-0.5">Bookings appear automatically in Google Calendar</p>
                         </div>
-                        <Button variant="outline" size="sm" disabled>Connect</Button>
+                        <a href="/api/auth/google">
+                            <Button variant={business?.calendar_type === "google" ? "gold" : "outline"} size="sm">
+                                {business?.calendar_type === "google" ? "Connected ✓" : "Connect"}
+                            </Button>
+                        </a>
                     </div>
                 </div>
             </div>
