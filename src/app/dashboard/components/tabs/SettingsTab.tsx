@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { ELEVENLABS_VOICES, type ElevenLabsVoice } from "@/lib/elevenlabs-voices"
 import { SUPPORTED_LANGUAGES } from "@/lib/vapi"
 import { createClient } from "@/lib/supabase/client"
-
+import CancelFlow from "@/components/settings/CancelFlow"
 type SettingsForm = {
     aiName: string; aiGreeting: string; businessName: string; businessType: string
     about: string; hoursStart: string; hoursEnd: string; notificationPhone: string
@@ -359,6 +359,7 @@ export function SettingsTab({ isDark, saving, isPro, form, currentVoiceId, curre
     const inputCls = `w-full px-4 py-2.5 text-sm font-sans border rounded-lg focus:outline-none focus:border-gold transition-colors ${isDark ? "bg-[#0F0F0D] border-[#2A2A26] text-[#F0EFE8] placeholder:text-[#444440]" : "bg-white border-border text-ink placeholder:text-ink-3"}`
     const labelCls = "block text-2xs font-sans font-500 text-ink-3 mb-1.5 tracking-[0.1em] uppercase"
     const cardCls = `rounded-xl border p-6 shadow-[var(--shadow-card)] ${isDark ? "bg-[#1A1A16] border-[#2A2A26]" : "bg-white border-border"}`
+    const [showCancel, setShowCancel] = useState(false);
 
     return (
         <div className="space-y-6 animate-[fadeIn_0.3s_ease] max-w-2xl">
@@ -452,6 +453,23 @@ export function SettingsTab({ isDark, saving, isPro, form, currentVoiceId, curre
                     {saving ? "Saving..." : "Save changes"}
                 </Button>
             </div>
+
+            {/* Subscription management */}
+            <div className={cardCls}>
+                <h3 className={`font-serif text-lg mb-1 ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>Subscription</h3>
+                <p className="text-xs font-sans text-ink-3 mb-5">Manage or cancel your LemonAssistant plan.</p>
+                <button
+                    onClick={() => setShowCancel(true)}
+                    className="text-xs font-sans text-ink-3 underline hover:text-ink transition-colors"
+                >
+                    Manage subscription
+                </button>
+            </div>
+
+            {showCancel && <CancelFlow onClose={() => setShowCancel(false)} />}
         </div>
     )
 }
+
+
+
