@@ -45,7 +45,9 @@ export function BillingTab({ isDark, business, subscription, minutesUsed, billin
                     </span>
                 </div>
                 <div className="mb-2 flex items-center justify-between">
-                    <p className="text-xs font-sans font-500 text-ink-3">Minutes used this month</p>
+                    <p className="text-xs font-sans font-500 text-ink-3">
+                        {subscription?.isActive ? "Minutes used this month" : "Trial minutes used"}
+                    </p>
                     <p className={`text-xs font-sans font-500 ${isDark ? "text-[#F0EFE8]" : "text-ink"}`}>{minutesUsed} / {limit} mins</p>
                 </div>
                 <div className={`w-full h-2 rounded-full overflow-hidden ${isDark ? "bg-[#2A2A26]" : "bg-cream-2"}`}>

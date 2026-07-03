@@ -42,12 +42,17 @@ async function getMinuteUsage(businessId: string): Promise<MinuteUsage | null> {
     const plan = isActive ? sub!.plan : "trial"
     const limit = planLimits[plan] ?? 13
 
-    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
-    const { data: calls } = await supabase
+    let query = supabase
         .from("calls")
         .select("duration_seconds")
         .eq("business_id", businessId)
-        .gte("created_at", startOfMonth)
+
+    if (isActive) {
+        const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
+        query = query.gte("created_at", startOfMonth)
+    }
+
+    const { data: calls } = await query
 
     const totalSeconds = (calls || []).reduce((sum, c) => sum + (c.duration_seconds || 0), 0)
     const minutesUsed = Math.round(totalSeconds / 60)
