@@ -84,22 +84,29 @@ async function checkMinuteLimit(businessId: string): Promise<{ allowed: boolean;
         trial: 13,
     }
 
-    const plan = sub?.status === "active" ? sub.plan : "trial"
+    const isActive = sub?.status === "active"
+    const plan = isActive ? sub!.plan : "trial"
     const limit = planLimits[plan] ?? 13
 
-    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
-    const { data: calls } = await supabase
+    // Paid plans reset monthly. Trial is a lifetime cap — count all calls ever.
+    let query = supabase
         .from("calls")
         .select("duration_seconds")
         .eq("business_id", businessId)
-        .gte("created_at", startOfMonth)
+
+    if (isActive) {
+        const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
+        query = query.gte("created_at", startOfMonth)
+    }
+
+    const { data: calls } = await query
 
     const minutesUsed = Math.round(
         (calls || []).reduce((sum, c) => sum + (c.duration_seconds || 0), 0) / 60
     )
 
     if (minutesUsed >= limit) {
-        const reason = sub?.status === "active"
+        const reason = isActive
             ? `Your ${plan} plan's ${limit} minutes have been used for this month.`
             : `Your free trial of ${limit} minutes has been used.`
         return { allowed: false, reason }
