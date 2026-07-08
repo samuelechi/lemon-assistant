@@ -42,6 +42,7 @@ export async function POST(req: NextRequest) {
             about: business.about,
             businessId: business.id,
             appUrl,
+            calendarType: business.calendar_type,
         })
 
         await supabase

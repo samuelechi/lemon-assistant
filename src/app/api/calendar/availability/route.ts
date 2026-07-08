@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { getGoogleCalendarEvents } from "@/lib/google-calendar"
+import { getCalendlyAvailability } from "@/lib/calendly"
 
 const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -66,7 +67,7 @@ async function getAvailability(businessId: string, date: string) {
 
     const { data: business } = await supabase
         .from("businesses")
-        .select("meeting_duration, hours_start, hours_end, calendar_type, calendar_token")
+        .select("meeting_duration, hours_start, hours_end, calendar_type, calendar_token, calendly_token, calendly_event_type_uri")
         .eq("id", businessId)
         .single()
 
@@ -81,6 +82,16 @@ async function getAvailability(businessId: string, date: string) {
 
     if (blocked) {
         return { available: [], message: "This date is unavailable" }
+    }
+
+    // Calendly manages its own availability entirely — skip the internal
+    // slot-generation logic below and just ask Calendly directly.
+    if (business.calendar_type === "calendly") {
+        if (!business.calendly_token || !business.calendly_event_type_uri) {
+            return { available: [], message: "Booking is not set up for this business yet." }
+        }
+        const slots = await getCalendlyAvailability(business.calendly_token, business.calendly_event_type_uri, date)
+        return { available: slots.map(s => s.label), date, dayOfWeek }
     }
 
     const { data: availability } = await supabase

@@ -18,6 +18,7 @@ export type AssistantConfig = {
   voiceId?: string    // Pro only
   language?: string   // Pro only
   reviewUrl?: string  // Pro only
+  calendarType?: string // "builtin" | "google" | "calendly"
 }
 
 export type SupportedLanguage = {
@@ -44,10 +45,28 @@ export const SUPPORTED_LANGUAGES: SupportedLanguage[] = [
 
 export const DEFAULT_LANGUAGE = "en"
 
+function buildJobSteps(calendarType?: string): string {
+  if (calendarType === "calendly") {
+    return `
+6. Confirm the best mobile number to text the booking link to. If they're
+   happy to use the number they're calling from, that's fine — otherwise ask
+   for one.
+7. Use the sendBookingLink tool, passing callerPhone and the time they chose
+8. Tell them they'll receive a text with a link to confirm and lock in that time
+9. Thank them and end the call`.trim()
+  }
+  return `
+6. Confirm the best mobile number to text the confirmation to. If they're happy
+   to use the number they're calling from, that's fine — otherwise ask for one.
+7. Use the bookAppointment tool to confirm the booking, passing callerPhone
+8. Tell them they will receive an SMS confirmation at that number
+9. Thank them and end the call`.trim()
+}
+
 function buildSystemPrompt({
   businessName, aiName, businessType,
   hoursStart, hoursEnd, workingDays,
-  meetingTypes, meetingDuration, about, language, reviewUrl,
+  meetingTypes, meetingDuration, about, language, reviewUrl, calendarType,
 }: AssistantConfig): string {
   const lang = SUPPORTED_LANGUAGES.find(l => l.code === language) ?? SUPPORTED_LANGUAGES[0]
   const langInstruction = language && language !== "en"
@@ -75,11 +94,7 @@ current year, and never book a date in the past.
 3. Ask for the reason for their call
 4. If they want to book an appointment, use the checkAvailability tool to find open slots
 5. Offer the available slots to the caller
-6. Confirm the best mobile number to text the confirmation to. If they're happy
-   to use the number they're calling from, that's fine — otherwise ask for one.
-7. Use the bookAppointment tool to confirm the booking, passing callerPhone
-8. Tell them they will receive an SMS confirmation at that number
-9. Thank them and end the call
+${buildJobSteps(calendarType)}
 
 ## Business hours:
 Open ${hoursStart} to ${hoursEnd}, ${workingDays.join(", ")}.
@@ -98,7 +113,7 @@ ${meetingTypes.join(", ")} — each ${meetingDuration} minutes long.
   `.trim()
 }
 
-function buildTools(businessId?: string, appUrl?: string, reviewUrl?: string) {
+function buildTools(businessId?: string, appUrl?: string, reviewUrl?: string, calendarType?: string) {
   if (!businessId || !appUrl) return []
 
   const tools: object[] = [
@@ -117,7 +132,27 @@ function buildTools(businessId?: string, appUrl?: string, reviewUrl?: string) {
       },
       server: { url: `${appUrl}/api/calendar/availability?businessId=${businessId}` },
     },
-    {
+  ]
+
+  if (calendarType === "calendly") {
+    tools.push({
+      type: "function",
+      function: {
+        name: "sendBookingLink",
+        description: "Text the caller a link to confirm and lock in their chosen appointment time",
+        parameters: {
+          type: "object",
+          properties: {
+            callerPhone: { type: "string", description: "Phone number to text the booking link to" },
+            time: { type: "string", description: "The time slot the caller chose, e.g. 2:00 PM" },
+          },
+          required: ["callerPhone", "time"],
+        },
+      },
+      server: { url: `${appUrl}/api/calendar/send-link?businessId=${businessId}` },
+    })
+  } else {
+    tools.push({
       type: "function",
       function: {
         name: "bookAppointment",
@@ -135,8 +170,8 @@ function buildTools(businessId?: string, appUrl?: string, reviewUrl?: string) {
         },
       },
       server: { url: `${appUrl}/api/calendar/book?businessId=${businessId}` },
-    },
-  ]
+    })
+  }
 
   if (reviewUrl) {
     tools.push({
@@ -168,9 +203,9 @@ function buildTranscriber(language?: string) {
 }
 
 export async function createVapiAssistant(config: AssistantConfig) {
-  const { businessName, aiName, businessId, appUrl, voiceId, language, reviewUrl } = config
+  const { businessName, aiName, businessId, appUrl, voiceId, language, reviewUrl, calendarType } = config
   const systemPrompt = buildSystemPrompt(config)
-  const tools = buildTools(businessId, appUrl, reviewUrl)
+  const tools = buildTools(businessId, appUrl, reviewUrl, calendarType)
 
   const res = await fetch(`${VAPI_BASE}/assistant`, {
     method: "POST",
@@ -221,9 +256,9 @@ export async function createVapiPhoneNumber(assistantId: string, appUrl?: string
 }
 
 export async function updateVapiAssistant(assistantId: string, config: AssistantConfig) {
-  const { businessName, aiName, businessId, appUrl, voiceId, language, reviewUrl } = config
+  const { businessName, aiName, businessId, appUrl, voiceId, language, reviewUrl, calendarType } = config
   const systemPrompt = buildSystemPrompt(config)
-  const tools = buildTools(businessId, appUrl, reviewUrl)
+  const tools = buildTools(businessId, appUrl, reviewUrl, calendarType)
 
   const res = await fetch(`${VAPI_BASE}/assistant/${assistantId}`, {
     method: "PATCH",

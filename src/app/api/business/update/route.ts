@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
         const { data: business } = await supabase
             .from("businesses")
             .select(
-                "id, vapi_assistant_id, name, ai_name, type, about, hours_start, hours_end, working_days, meeting_types, meeting_duration, voice_id, language, review_url"
+                "id, vapi_assistant_id, name, ai_name, type, about, hours_start, hours_end, working_days, meeting_types, meeting_duration, voice_id, language, review_url, calendar_type"
             )
             .eq("user_id", user.id)
             .single()
@@ -88,6 +88,7 @@ export async function POST(req: NextRequest) {
                 voiceId: (voice_id ?? business.voice_id) ?? undefined,
                 language: (language ?? business.language) ?? undefined,
                 reviewUrl: (review_url ?? business.review_url) ?? undefined,
+                calendarType: business.calendar_type ?? undefined,
             })
         }
 
