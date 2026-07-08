@@ -26,6 +26,7 @@ const MEETING_TYPES = [
 
 const CALENDARS = [
     { id: "google", label: "Google Calendar", icon: "🗓️", desc: "Bookings appear automatically in Google Calendar" },
+    { id: "calendly", label: "Calendly", icon: "📅", desc: "AI checks availability and texts callers a link to confirm" },
     { id: "builtin", label: "Use built-in calendar", icon: "⚡", desc: "View all bookings inside your LemonAssistant dashboard" },
 ]
 
@@ -261,7 +262,7 @@ export default function OnboardingPage() {
                         <div>
                             <p className="text-2xs font-sans font-500 tracking-[0.14em] uppercase text-gold mb-3">Step 3 of 4</p>
                             <h1 className="font-serif text-4xl md:text-5xl text-ink mb-2 leading-[1.1]">Connect your<br /><em className="text-gradient-gold not-italic">calendar.</em></h1>
-                            <p className="text-sm font-sans text-ink-3 mb-8 leading-relaxed">Your AI checks real availability and books directly into your calendar. No double bookings, ever.</p>
+                            <p className="text-sm font-sans text-ink-3 mb-8 leading-relaxed">Your AI checks real availability so you never get double booked.</p>
                             <div className="bg-white border border-border rounded-xl p-6 md:p-8">
                                 <div className="space-y-3">
                                     {CALENDARS.map(cal => (
@@ -279,6 +280,11 @@ export default function OnboardingPage() {
                                 {form.calendarType === "google" && (
                                     <div className="mt-5 p-4 bg-gold-pale border border-gold-light rounded-lg">
                                         <p className="text-xs font-sans text-gold-dark leading-relaxed">🗓️ You&apos;ll connect Google Calendar from your dashboard after setup is complete.</p>
+                                    </div>
+                                )}
+                                {form.calendarType === "calendly" && (
+                                    <div className="mt-5 p-4 bg-gold-pale border border-gold-light rounded-lg">
+                                        <p className="text-xs font-sans text-gold-dark leading-relaxed">📅 You&apos;ll connect your Calendly account from your dashboard after setup. Note: Calendly requires a paid Calendly plan, and your AI will text callers a link to confirm rather than booking instantly.</p>
                                     </div>
                                 )}
                             </div>

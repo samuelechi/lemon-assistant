@@ -1,4 +1,3 @@
-
 "use client"
 import { useState } from "react"
 import Link from "next/link"
@@ -143,7 +142,7 @@ const faqs = [
   },
   {
     q: "What calendar does it connect to?",
-    a: "Google Calendar, Outlook, Calendly, and Apple Calendar. No calendar? We include a built-in one inside your dashboard.",
+    a: "Google Calendar or Calendly — connect either in a couple minutes from your dashboard. No calendar? We include a built-in one so you can view every booking right inside LemonAssistant.",
   },
   {
     q: "Will callers know they're talking to AI?",
@@ -359,7 +358,7 @@ export default function HomePage() {
           <div className="grid md:grid-cols-4 gap-6">
             {[
               { step: "1", icon: <Zap size={18} />, title: "Sign up free", desc: "Enter your business details. Takes 2 minutes. No credit card needed to create your account." },
-              { step: "2", icon: <Calendar size={18} />, title: "Connect your calendar", desc: "Google Calendar, Outlook, Calendly, or Apple — one click. Lisa checks it live during every call." },
+              { step: "2", icon: <Calendar size={18} />, title: "Connect your calendar", desc: "Google Calendar or Calendly — one click. Lisa checks it live during every call." },
               { step: "3", icon: <Phone size={18} />, title: "Activate for $2.50", desc: "Pay $2.50 to get your dedicated local number. This is the only cost before your first plan." },
               { step: "4", icon: <ArrowRight size={18} />, title: "Forward your calls", desc: "Set unanswered calls to forward to your LemonAssistant number. Lisa is live and answering." },
             ].map(s => (
